@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="trek_green_dark">#2E5E4E</color>
+    <color name="trek_green">#3D7A64</color>
+    <color name="trek_green_light">#EAF2ED</color>
+    <color name="trek_amber">#D98C2B</color>
+    <color name="trek_red_alert">#C1432A</color>
+    <color name="trek_background">#FFFFFF</color>
+    <color name="trek_surface_variant">#F2F2F0</color>
+    <color name="trek_outline">#D8D8D4</color>
+    <color name="trek_on_background">#1F1F1F</color>
+</resources>

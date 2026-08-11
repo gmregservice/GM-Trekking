@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GM-Trekking</string>
+
+    <!-- Home -->
+    <string name="home_title">GM-Trekking</string>
+    <string name="home_import_gpx">Carica un percorso GPX</string>
+    <string name="home_places_nearby">Luoghi utili</string>
+
+    <!-- Navigazione -->
+    <string name="nav_off_route_title">Sei fuori dal percorso</string>
+    <string name="nav_off_route_instruction">Torna verso il tracciato: segui la freccia</string>
+    <string name="nav_distance_to_next_meters">%1$d m</string>
+    <string name="nav_distance_remaining">Mancano %1$s al termine del percorso</string>
+    <string name="nav_tracking_notification_text">Navigazione in corso: GM-Trekking sta seguendo la tua posizione</string>
+    <string name="nav_import_prompt">Scegli un file .gpx dal tuo dispositivo</string>
+    <string name="nav_start_navigation">Inizia la navigazione</string>
+
+    <!-- Luoghi utili: categorie (etichette semplici, non gergo tecnico) -->
+    <string name="category_all">Tutti</string>
+    <string name="category_restaurant">Ristoranti</string>
+    <string name="category_bar">Bar</string>
+    <string name="category_trattoria">Trattorie</string>
+    <string name="category_hotel">Hotel</string>
+    <string name="category_hostel">Ostelli</string>
+    <string name="category_alpine_hut">Rifugi</string>
+    <string name="category_camp_site">Campeggi</string>
+    <string name="category_guest_house">Agriturismi / B&amp;B</string>
+
+    <!-- Permessi -->
+    <string name="permission_location_rationale">GM-Trekking ha bisogno della posizione per guidarti lungo il percorso caricato.</string>
+</resources>

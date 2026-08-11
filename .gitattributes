@@ -1,0 +1,21 @@
+# Normalizza i fine riga: testo con LF nel repository, conversione automatica
+# in checkout/commit gestita da Git secondo le regole sotto. Risolve l'avviso
+# di GitHub Desktop su LF/CRLF in modo esplicito, invece di lasciarlo alla
+# configurazione locale di ciascuno.
+* text=auto eol=lf
+
+# Script di shell: devono restare LF anche su Windows, altrimenti non
+# vengono riconosciuti da bash (WSL, Git Bash, CI su Linux/macOS).
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Script Windows: CRLF, come si aspetta cmd.exe.
+*.bat text eol=crlf
+
+# File binari: nessuna conversione.
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
