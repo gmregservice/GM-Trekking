@@ -48,6 +48,16 @@ Criterio di uscita dalla fase: un utente non esperto riesce a caricare un percor
 - Cache locale dei luoghi utili (per rendere disponibile l'elenco POI anche offline dopo il primo download di un'area).
 - Ricerca luoghi utili per raggio dalla posizione corrente, oltre che lungo il tracciato.
 
+### Richieste utente da sviluppare — dopo aver testato adeguatamente la versione attuale
+
+Annotate su richiesta esplicita (agosto 2026), non ancora iniziate. Da affrontare in quest'ordine indicativo, dopo il test sul campo del flusso base (import GPX opzionale, navigazione, luoghi utili):
+
+1. **Tracciamento del percorso effettuato**: registrazione del cammino realmente fatto — sia quando si segue una traccia GPX importata, sia quando si parte semplicemente indicando un punto di partenza e uno di arrivo senza GPX. Al termine, salvare il percorso con tempo impiegato, distanza in km e, se ricavabile dal GPS/altimetro del telefono, dislivello. È il tracciamento "attività" standard delle app di questo tipo (Strava, Komoot, ecc.) — probabilmente richiede di introdurre Room per la persistenza locale (già pianificata in Fase 2 per la cache POI, si può accorpare).
+2. **Foto geolocalizzate sul percorso**: possibilità di scattare una foto dall'interno dell'app durante il cammino; la foto viene associata al punto esatto in cui è stata scattata e il percorso salvato mostra un'indicazione visiva (es. icona sulla mappa) nei punti in cui sono state scattate una o più foto.
+3. **Due tipi di note**:
+   - **Nota generale del percorso**: una sola nota testuale libera associata all'intero percorso (es. meteo del giorno, compagni di cammino, condizioni generali).
+   - **Nota puntuale geolocalizzata**: come le foto, ma testuale — dalla mappa si crea una nota legata a un punto preciso (es. tratto pericoloso o mal segnalato), salvata con la posizione e evidenziata sulla mappa.
+
 ## Fase 3 — Community e arricchimento dati (3-4 mesi dopo la Fase 2)
 
 - Condivisione di percorsi tra utenti.
