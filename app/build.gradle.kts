@@ -63,6 +63,13 @@ android {
 // recenti del plugin Kotlin).
 kotlin {
     jvmToolchain(17)
+    compilerOptions {
+        // TopAppBar (Material3) è contrassegnata @ExperimentalMaterial3Api: senza
+        // questo opt-in a livello di modulo, ogni schermata che la usa fallisce la
+        // compilazione (errore reale riscontrato in CI). L'opt-in qui evita di dover
+        // annotare @OptIn(ExperimentalMaterial3Api::class) su ogni singola funzione.
+        freeCompilerArgs.add("-opt-in=androidx.compose.material3.ExperimentalMaterial3Api")
+    }
 }
 
 dependencies {
