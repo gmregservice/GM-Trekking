@@ -38,10 +38,9 @@ Per generare anche una APK di release (non firmata, non installabile direttament
 
 Questo scheletro è stato scritto senza poter compilare in un ambiente con SDK Android e Gradle disponibili — è corretto dal punto di vista della struttura e della logica, ma la prima apertura in Android Studio potrebbe richiedere piccoli aggiustamenti. In ordine di probabilità:
 
-1. **Integrazione mappa (`ui/screens/trailnavigation/TrekMapView.kt`)**: usa lo stile dimostrativo pubblico di MapLibre (`demotiles.maplibre.org`), pensato solo per test e con pochissimo dettaglio cartografico. Prima di qualunque uso reale va sostituito con uno stile mappa vero (OpenFreeMap, MapTiler, Stadia Maps, o un servizio self-hosted).
-2. **Versioni delle dipendenze** in `app/build.gradle.kts`: verificate tramite ricerca ad agosto 2026, ma può darsi che Android Studio proponga versioni più recenti alla prima apertura — va bene accettarle.
-3. **Permessi di localizzazione in background**: il flusso attuale richiede solo il permesso di posizione in primo piano prima di avviare la navigazione. Il permesso "sempre" (`ACCESS_BACKGROUND_LOCATION`, dichiarato nel manifest) va richiesto separatamente con un flusso dedicato — non ancora implementato nella UI — prima che il tracciamento continui in modo affidabile a schermo spento.
-4. **Nessun test automatico ancora scritto** (le dipendenze di test sono già in `app/build.gradle.kts`, pronte per quando si aggiungeranno).
+1. **Versioni delle dipendenze** in `app/build.gradle.kts`: verificate tramite ricerca ad agosto 2026, ma può darsi che vengano proposte versioni più recenti in futuro — va bene accettarle.
+2. **Permessi di localizzazione in background**: il flusso attuale richiede solo il permesso di posizione in primo piano prima di avviare la navigazione. Il permesso "sempre" (`ACCESS_BACKGROUND_LOCATION`, dichiarato nel manifest) va richiesto separatamente con un flusso dedicato — non ancora implementato nella UI — prima che il tracciamento continui in modo affidabile a schermo spento.
+3. **Nessun test automatico ancora scritto** (le dipendenze di test sono già in `app/build.gradle.kts`, pronte per quando si aggiungeranno).
 
 ### Problemi già incontrati e risolti in CI
 
@@ -52,6 +51,7 @@ Questo scheletro è stato scritto senza poter compilare in un ambiente con SDK A
 ### Problemi riscontrati su dispositivo reale (dopo l'installazione)
 
 - **L'app si chiude (crash) al caricamento di un tracciato GPX**: causato dall'assenza dell'inizializzazione di MapLibre. La libreria richiede una chiamata a `MapLibre.getInstance(context)` prima che qualunque `MapView` venga creata — mancava del tutto. Poiché caricare un GPX portava subito alla schermata di navigazione (che crea la mappa), il crash comparirebbe in quel momento. Risolto aggiungendo l'inizializzazione in `GMTrekkingApp.kt` (`onCreate`), l'unico punto garantito ad essere eseguito prima di qualsiasi schermata.
+- **Fuori casa la mappa resta vuota (solo sfondo colorato, nessuna via/terreno, posizione poco visibile)**: causato dallo stile dimostrativo di MapLibre (`demotiles.maplibre.org`), che contiene solo confini nazionali a bassissimo dettaglio — ai livelli di zoom usati dall'app (15+) non c'era alcun dato reale da disegnare in nessuna zona del mondo, solo il colore di sfondo dello stile. Non era emerso nei test precedenti perché fatti al chiuso, senza una posizione GPS reale da inquadrare. Risolto sostituendo lo stile con quello di [OpenFreeMap](https://openfreemap.org/) (`liberty`, gratuito, senza chiave API, dati OpenStreetMap con vero dettaglio cartografico) in `TrekMapView.kt`.
 
 ### Modifiche al flusso dell'app
 

@@ -27,6 +27,7 @@ Questi punti sono criteri di accettazione della fase MVP, non funzionalità opzi
 - [x] Caricamento GPX reso opzionale: l'app si apre sulla mappa con la posizione corrente, non forza più il caricamento di un percorso prima di mostrare qualcosa
 - [x] Schermata di crash in-app (mostra l'errore a schermo, con opzione "Condividi"): necessaria perché senza Android Studio non c'è modo di leggere Logcat
 - [x] Firma APK di debug stabilizzata (`keystore/debug.keystore` fissa): prima ogni build GitHub Actions firmava l'APK con una chiave diversa e le build successive alla prima non si installavano più sopra quella vecchia
+- [x] Mappa reale sostituita allo stile dimostrativo: fuori casa la mappa restava vuota (solo colore di sfondo, nessun dettaglio) perché lo stile demo di MapLibre non ha dati oltre i confini nazionali — sostituito con OpenFreeMap (`liberty`)
 
 ## Fase 1 — MVP (obiettivo: 4-6 mesi, team 1-2 sviluppatori)
 
@@ -94,7 +95,7 @@ Annotate su richiesta esplicita (agosto 2026), non ancora iniziate. Da affrontar
 
 - **Tema grafico**: tema bianco per le schermate dell'app. ✅ Fatto — vedi `ui/theme/Theme.kt` e `Color.kt`.
 - **Coerenza ad ogni modifica**: ad ogni modifica ai file del progetto, verificare che tutto resti coerente e che non manchi nulla (riferimenti tra file, dipendenze usate ma non dichiarate o viceversa, versioni allineate) prima di considerare il passo concluso.
-- **Numero di versione**: la versione attuale del progetto è la **1.4** (`versionName` in `app/build.gradle.kts`; aggiornata con il fix della firma APK di debug instabile in CI). Ad ogni modifica rilasciata, aggiornare `versionCode` (+1) e `versionName`. Il numero deve anche essere mostrato nell'interfaccia dell'app (non ancora fatto): `buildFeatures.buildConfig = true` è già abilitato nel Gradle, quindi basterà leggere `BuildConfig.VERSION_NAME` — punto d'ingresso naturale: un piccolo testo nella barra in alto di `MainMapScreen.kt`, o una futura schermata "Informazioni".
+- **Numero di versione**: la versione attuale del progetto è la **1.5** (`versionName` in `app/build.gradle.kts`; aggiornata con la sostituzione della mappa dimostrativa con una mappa reale, OpenFreeMap). Ad ogni modifica rilasciata, aggiornare `versionCode` (+1) e `versionName`. Il numero deve anche essere mostrato nell'interfaccia dell'app (non ancora fatto): `buildFeatures.buildConfig = true` è già abilitato nel Gradle, quindi basterà leggere `BuildConfig.VERSION_NAME` — punto d'ingresso naturale: un piccolo testo nella barra in alto di `MainMapScreen.kt`, o una futura schermata "Informazioni".
 - **Workflow di sviluppo**: l'utente non usa Android Studio, solo GitHub (push → GitHub Actions compila l'APK → installazione diretta sul telefono). Le richieste di log/diagnostica vanno quindi pensate senza presumere accesso a Logcat/adb — da qui la schermata di crash in-app (`crash/CrashHandler.kt`).
 
 ## Rischi da monitorare (ripresi dall'analisi di fattibilità)

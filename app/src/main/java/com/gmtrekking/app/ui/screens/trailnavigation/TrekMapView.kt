@@ -35,11 +35,14 @@ import org.maplibre.geojson.Feature
  *    del percorso: bivi, tratti ravvicinati — vedi NavigationEngine.shouldZoomIn;
  *    ha senso solo quando un percorso è caricato, il chiamante passa false altrimenti).
  *
- * NOTA IMPORTANTE: usa lo stile dimostrativo pubblico di MapLibre
- * (demotiles.maplibre.org), pensato solo per test — ha pochissimo dettaglio
- * cartografico. Prima di qualsiasi uso reale va sostituito con uno stile
- * mappa vero (es. OpenFreeMap, MapTiler, Stadia Maps, o un servizio tile
- * self-hosted), come discusso nell'analisi di fattibilità.
+ * Stile mappa: OpenFreeMap ("liberty", tile.openfreemap.org), gratuito e senza
+ * chiave API, dati OpenStreetMap. Sostituisce lo stile dimostrativo iniziale
+ * di MapLibre (demotiles.maplibre.org), che copre solo confini nazionali a
+ * bassissimo dettaglio: fuori città, ai livelli di zoom usati da questa app
+ * (15+), non c'era alcun dato da disegnare, quindi la mappa restava vuota,
+ * con solo il colore di sfondo dello stile — bug reale confermato con un
+ * test all'aperto (schermo verde/vuoto, nessuna mappa, posizione poco
+ * visibile senza punti di riferimento intorno).
  */
 @Composable
 fun TrekMapView(
@@ -67,7 +70,7 @@ fun TrekMapView(
                 onStart()
                 onResume()
                 getMapAsync { maplibreMap ->
-                    maplibreMap.setStyle(Style.Builder().fromUri(DEMO_STYLE_URL)) { style ->
+                    maplibreMap.setStyle(Style.Builder().fromUri(MAP_STYLE_URL)) { style ->
                         addPositionLayer(style, currentLat, currentLon)
                         if (track != null) {
                             addTrackLayer(style, track)
@@ -141,7 +144,7 @@ fun TrekMapView(
     }
 }
 
-private const val DEMO_STYLE_URL = "https://demotiles.maplibre.org/style.json"
+private const val MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
 private const val SOURCE_TRACK = "gm-trekking-track-source"
 private const val LAYER_TRACK = "gm-trekking-track-layer"
 private const val SOURCE_POSITION = "gm-trekking-position-source"
