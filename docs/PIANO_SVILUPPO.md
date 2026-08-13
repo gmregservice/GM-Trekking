@@ -64,8 +64,9 @@ Criterio di uscita dalla fase: un utente non esperto riesce a caricare un percor
 
 ## Note operative (indicazioni dirette dell'utente, da rispettare in ogni sessione)
 
-- **Tema grafico**: tema bianco per le schermate dell'app (non lo schema scuro/verde scuro usato finora nello scheletro). Da correggere in `ui/theme/Theme.kt` e `Color.kt` quando si riprende lo sviluppo delle schermate.
+- **Tema grafico**: tema bianco per le schermate dell'app. ✅ Fatto — vedi `ui/theme/Theme.kt` e `Color.kt`.
 - **Coerenza ad ogni modifica**: ad ogni modifica ai file del progetto, verificare che tutto resti coerente e che non manchi nulla (riferimenti tra file, dipendenze usate ma non dichiarate o viceversa, versioni allineate) prima di considerare il passo concluso.
+- **Numero di versione**: la versione attuale del progetto è la **1.0** (`versionName` in `app/build.gradle.kts`). Ad ogni modifica rilasciata, aggiornare `versionCode` (+1) e `versionName`. Il numero deve anche essere mostrato nell'interfaccia dell'app (non ancora fatto): `buildFeatures.buildConfig = true` è già abilitato nel Gradle, quindi basterà leggere `BuildConfig.VERSION_NAME` — punto d'ingresso naturale: un piccolo testo in fondo a `HomeScreen.kt`, o una futura schermata "Informazioni".
 
 ## Rischi da monitorare (ripresi dall'analisi di fattibilità)
 

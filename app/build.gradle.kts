@@ -1,6 +1,8 @@
+// Da AGP 9.0 il supporto Kotlin è integrato (built-in): niente più
+// "org.jetbrains.kotlin.android" qui, altrimenti la build fallisce.
+// I plugin Compose e serialization restano necessari.
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
@@ -13,8 +15,13 @@ android {
         applicationId = "com.gmtrekking.app"
         minSdk = 26
         targetSdk = 37
+        // Tenere aggiornati ad ogni modifica rilasciata (vedi docs/PIANO_SVILUPPO.md,
+        // sezione "Note operative"). versionCode: intero progressivo, +1 ad ogni
+        // release (usato da Android per capire se una APK è più recente di un'altra).
+        // versionName: numero visibile all'utente (vedi anche BuildConfig.VERSION_NAME,
+        // da mostrare nell'app — pianificato, non ancora implementato in UI).
         versionCode = 1
-        versionName = "0.1.0-mvp"
+        versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -38,6 +45,10 @@ android {
 
     buildFeatures {
         compose = true
+        // Necessario per leggere BuildConfig.VERSION_NAME dal codice (dalla versione 8
+        // di AGP in poi la generazione di BuildConfig è disattivata di default).
+        // Usato per mostrare il numero di versione nell'app (vedi Note operative).
+        buildConfig = true
     }
 
     packaging {

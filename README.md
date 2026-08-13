@@ -41,6 +41,10 @@ Questo scheletro è stato scritto senza poter compilare in un ambiente con SDK A
 3. **Permessi di localizzazione in background**: il flusso attuale richiede solo il permesso di posizione in primo piano prima di avviare la navigazione. Il permesso "sempre" (`ACCESS_BACKGROUND_LOCATION`, dichiarato nel manifest) va richiesto separatamente con un flusso dedicato — non ancora implementato nella UI — prima che il tracciamento continui in modo affidabile a schermo spento.
 4. **Nessun test automatico ancora scritto** (le dipendenze di test sono già in `app/build.gradle.kts`, pronte per quando si aggiungeranno).
 
+### Problemi già incontrati e risolti in CI
+
+- **"The 'org.jetbrains.kotlin.android' plugin is no longer required" (build fallita su GitHub Actions)**: con AGP 9.0+ il supporto Kotlin è integrato nel plugin Android stesso; applicare anche il vecchio plugin `org.jetbrains.kotlin.android` fa fallire la build. Risolto rimuovendolo da `build.gradle.kts` (root) e `app/build.gradle.kts`, lasciando solo i plugin `org.jetbrains.kotlin.plugin.compose` e `org.jetbrains.kotlin.plugin.serialization`, che restano necessari. Dettagli: [guida ufficiale alla migrazione](https://developer.android.com/build/migrate-to-built-in-kotlin).
+
 ## Struttura del progetto
 
 ```
