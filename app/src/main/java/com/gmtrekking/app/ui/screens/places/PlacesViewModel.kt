@@ -48,9 +48,14 @@ class PlacesViewModel @JvmOverloads constructor(
                 val pois = repository.findNearby(centerLat, centerLon, radiusMeters)
                 _uiState.value = _uiState.value.copy(isLoading = false, allPois = pois)
             } catch (t: Throwable) {
+                // Senza accesso a Logcat (workflow solo-GitHub-Actions), il tipo e il
+                // messaggio dell'eccezione vanno mostrati direttamente in UI, altrimenti
+                // ogni fallimento (timeout, DNS, server irraggiungibile, risposta non
+                // valida...) risulta indistinguibile da un generico "manca la connessione".
+                val detail = "${t::class.simpleName}: ${t.message ?: "nessun dettaglio"}"
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    errorMessage = "Non riesco a caricare i luoghi utili. Controlla la connessione e riprova.",
+                    errorMessage = "Non riesco a caricare i luoghi utili. Controlla la connessione e riprova.\n\nDettaglio tecnico: $detail",
                 )
             }
         }
