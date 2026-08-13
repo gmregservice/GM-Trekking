@@ -20,8 +20,8 @@ android {
         // release (usato da Android per capire se una APK è più recente di un'altra).
         // versionName: numero visibile all'utente (vedi anche BuildConfig.VERSION_NAME,
         // da mostrare nell'app — pianificato, non ancora implementato in UI).
-        versionCode = 3
-        versionName = "1.3"
+        versionCode = 4
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -38,7 +38,12 @@ android {
         // l'app restava quella vecchia, senza un errore chiaro a schermo).
         // Usando sempre questa stessa keystore, la firma resta identica tra
         // una build e l'altra e l'installazione aggiorna l'app normalmente.
-        create("debug") {
+        // NOTA: il plugin Android crea già da solo una signingConfig "debug"
+        // di default (con la keystore casuale ~/.android/debug.keystore) —
+        // create("debug") fallisce la build ("SigningConfig ... already
+        // exists", errore reale riscontrato in CI). Va usato getByName per
+        // modificare quella già esistente, non crearne una nuova.
+        getByName("debug") {
             storeFile = rootProject.file("keystore/debug.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
