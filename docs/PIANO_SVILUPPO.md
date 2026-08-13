@@ -19,17 +19,19 @@ Questi punti sono criteri di accettazione della fase MVP, non funzionalità opzi
 ## Fase 0 — Setup
 
 - [x] Repository GitHub creato (`gmregservice/GM-Trekking`)
-- [x] Scheletro progetto Android Kotlin + Jetpack Compose (schermate Home, Import GPX, Navigazione, Luoghi utili; motore di navigazione; integrazione MapLibre; client Overpass API; servizio di localizzazione in foreground)
+- [x] Scheletro progetto Android Kotlin + Jetpack Compose (mappa principale con posizione corrente e navigazione, Luoghi utili; motore di navigazione; integrazione MapLibre; client Overpass API; servizio di localizzazione in foreground)
 - [x] Pipeline GitHub Actions per build automatica dell'APK di debug (e, su richiesta, di release non firmata)
 - [x] Tema grafico bianco applicato a tutte le schermate
-- [ ] Primo push e primo build verde su GitHub Actions
-- [ ] Apertura del progetto in Android Studio e primo run su dispositivo/emulatore (vedi README.md, sezione "Cosa verificare per primo")
+- [x] Primo push e primo build verde su GitHub Actions
+- [x] APK installata e avviata su dispositivo reale (workflow di sviluppo: solo GitHub Actions, senza Android Studio)
+- [x] Caricamento GPX reso opzionale: l'app si apre sulla mappa con la posizione corrente, non forza più il caricamento di un percorso prima di mostrare qualcosa
+- [x] Schermata di crash in-app (mostra l'errore a schermo, con opzione "Condividi"): necessaria perché senza Android Studio non c'è modo di leggere Logcat
 
 ## Fase 1 — MVP (obiettivo: 4-6 mesi, team 1-2 sviluppatori)
 
 Funzionalità minime per un prodotto usabile e sicuro:
 
-1. **Import GPX**: caricamento di un file `.gpx` dal dispositivo, parsing e visualizzazione del tracciato su mappa offline.
+1. **Import GPX (opzionale)**: caricamento di un file `.gpx` dal dispositivo, parsing e visualizzazione del tracciato su mappa offline. L'app si apre comunque mostrando la posizione corrente sulla mappa anche senza un percorso caricato: caricarne uno è un'azione che l'utente sceglie di fare, non un passaggio obbligato.
 2. **Navigazione GPS sul tracciato**: posizione utente in tempo reale sovrapposta al tracciato, calcolo continuo della distanza dal percorso, avviso chiaro di deviazione, freccia direzionale e zoom automatico nei punti critici (vedi principio guida sopra).
 3. **Mappe offline**: download dell'area del percorso caricato prima di partire, per garantire funzionamento senza copertura cellulare.
 4. **Luoghi utili**: elenco di ristoranti, bar, trattorie, hotel, ostelli, rifugi nei dintorni del tracciato o della posizione corrente, con filtro per categoria (tutti / ristoranti / bar / trattorie / hotel / ostelli / rifugi), dati da OpenStreetMap (Overpass API).
@@ -66,7 +68,8 @@ Criterio di uscita dalla fase: un utente non esperto riesce a caricare un percor
 
 - **Tema grafico**: tema bianco per le schermate dell'app. ✅ Fatto — vedi `ui/theme/Theme.kt` e `Color.kt`.
 - **Coerenza ad ogni modifica**: ad ogni modifica ai file del progetto, verificare che tutto resti coerente e che non manchi nulla (riferimenti tra file, dipendenze usate ma non dichiarate o viceversa, versioni allineate) prima di considerare il passo concluso.
-- **Numero di versione**: la versione attuale del progetto è la **1.0** (`versionName` in `app/build.gradle.kts`). Ad ogni modifica rilasciata, aggiornare `versionCode` (+1) e `versionName`. Il numero deve anche essere mostrato nell'interfaccia dell'app (non ancora fatto): `buildFeatures.buildConfig = true` è già abilitato nel Gradle, quindi basterà leggere `BuildConfig.VERSION_NAME` — punto d'ingresso naturale: un piccolo testo in fondo a `HomeScreen.kt`, o una futura schermata "Informazioni".
+- **Numero di versione**: la versione attuale del progetto è la **1.1** (`versionName` in `app/build.gradle.kts`; aggiornata da 1.0 con il cambio di flusso e la schermata di crash). Ad ogni modifica rilasciata, aggiornare `versionCode` (+1) e `versionName`. Il numero deve anche essere mostrato nell'interfaccia dell'app (non ancora fatto): `buildFeatures.buildConfig = true` è già abilitato nel Gradle, quindi basterà leggere `BuildConfig.VERSION_NAME` — punto d'ingresso naturale: un piccolo testo nella barra in alto di `MainMapScreen.kt`, o una futura schermata "Informazioni".
+- **Workflow di sviluppo**: l'utente non usa Android Studio, solo GitHub (push → GitHub Actions compila l'APK → installazione diretta sul telefono). Le richieste di log/diagnostica vanno quindi pensate senza presumere accesso a Logcat/adb — da qui la schermata di crash in-app (`crash/CrashHandler.kt`).
 
 ## Rischi da monitorare (ripresi dall'analisi di fattibilità)
 

@@ -6,7 +6,9 @@ Piano di sviluppo completo: [`docs/PIANO_SVILUPPO.md`](docs/PIANO_SVILUPPO.md).
 
 ## Stato del progetto
 
-Scheletro iniziale: struttura Gradle, schermate Compose (Home, import GPX, navigazione, luoghi utili), motore di navigazione, integrazione mappe (MapLibre) e dati luoghi utili (OpenStreetMap / Overpass API). Non ancora testato su dispositivo reale — vedi "Cosa verificare per primo" più sotto.
+Scheletro iniziale: struttura Gradle, schermate Compose (mappa principale con posizione corrente e navigazione, luoghi utili), motore di navigazione, integrazione mappe (MapLibre) e dati luoghi utili (OpenStreetMap / Overpass API). L'app è stata installata e avviata su un dispositivo reale; alcuni problemi emersi in quel test sono già stati corretti (vedi sotto).
+
+L'app si apre direttamente sulla mappa con la posizione corrente: caricare un percorso GPX è un'azione opzionale, non un passaggio obbligato. Una volta caricato un percorso, la stessa schermata mostra anche la navigazione (freccia direzionale, distanza, avviso di fuori percorso).
 
 ## Come funziona la build automatica (GitHub Actions)
 
@@ -47,21 +49,33 @@ Questo scheletro è stato scritto senza poter compilare in un ambiente con SDK A
 - **"This material API is experimental" su `TopAppBar` (errore di compilazione Kotlin)**: `TopAppBar` di Material3 è contrassegnata `@ExperimentalMaterial3Api` e senza un opt-in esplicito il compilatore la tratta come errore, non solo come avviso. Risolto aggiungendo l'opt-in a livello di modulo in `app/build.gradle.kts` (`kotlin { compilerOptions { freeCompilerArgs.add("-opt-in=androidx.compose.material3.ExperimentalMaterial3Api") } }`), invece di annotare ogni singola schermata.
 - **"Cannot access 'val RowColumnParentData?.weight: Float': it is internal in file"**: causato da un import esplicito sbagliato, `import androidx.compose.foundation.layout.weight`. Il modificatore `weight()` non è una funzione top-level importabile per nome: è un membro delle interfacce `ColumnScope`/`RowScope` di Compose, disponibile automaticamente dentro un blocco `Column { }` / `Row { }` senza bisogno di import. Quell'import esplicito faceva risolvere il simbolo sbagliato (una proprietà interna di Compose con lo stesso nome). Risolto rimuovendo l'import da `PlacesScreen.kt` e `TrailNavigationScreen.kt`.
 
+### Problemi riscontrati su dispositivo reale (dopo l'installazione)
+
+- **L'app si chiude (crash) al caricamento di un tracciato GPX**: causato dall'assenza dell'inizializzazione di MapLibre. La libreria richiede una chiamata a `MapLibre.getInstance(context)` prima che qualunque `MapView` venga creata — mancava del tutto. Poiché caricare un GPX portava subito alla schermata di navigazione (che crea la mappa), il crash comparirebbe in quel momento. Risolto aggiungendo l'inizializzazione in `GMTrekkingApp.kt` (`onCreate`), l'unico punto garantito ad essere eseguito prima di qualsiasi schermata.
+
+### Modifiche al flusso dell'app
+
+- **Caricamento GPX reso opzionale**: inizialmente l'app obbligava a caricare un percorso GPX prima di mostrare qualunque cosa (schermata Home → Import GPX → Navigazione). Su richiesta, il flusso è stato cambiato: l'app si apre direttamente su `MainMapScreen` (`ui/screens/trailnavigation/MainMapScreen.kt`), che mostra subito la posizione corrente sulla mappa e offre il caricamento di un GPX come azione facoltativa, disponibile in ogni momento (pulsante "Carica un percorso GPX", sostituito da "Cambia percorso"/"Rimuovi percorso" quando un tracciato è già caricato). Le vecchie schermate `HomeScreen` e `ImportTrailScreen` sono state rimosse (la logica di scelta/parsing del file GPX è ora inline in `MainMapScreen.kt`); `TrailNavigationScreen` è stata sostituita da `MainMapScreen`, che gestisce sia lo stato "solo posizione" sia lo stato "percorso caricato, navigazione attiva".
+
+### Schermata di crash in-app
+
+Dato che l'app viene compilata e distribuita solo tramite GitHub Actions, senza Android Studio, non c'è modo di leggere Logcat in caso di crash. È stato aggiunto `crash/CrashHandler.kt`, installato in `GMTrekkingApp.onCreate`: se l'app va in crash, invece del messaggio generico di sistema si apre una schermata (`crash/CrashReportActivity.kt`, in un processo separato per restare affidabile anche se il processo principale è compromesso) che mostra il testo completo dell'errore, con un pulsante "Condividi" per mandarmelo direttamente. Se l'app si chiude di nuovo in modo anomalo, questa schermata dovrebbe comparire al posto del crash silenzioso — se anche questo non succede, è un segnale che vale la pena approfondire a parte.
+
 ## Struttura del progetto
 
 ```
 app/src/main/java/com/gmtrekking/app/
 ├── MainActivity.kt, GMTrekkingApp.kt
+├── crash/                 Gestore di crash: mostra l'errore a schermo invece di chiudersi silenziosamente
 ├── ui/
 │   ├── theme/            Tema grafico (bianco, vedi nota sotto)
 │   ├── navigation/        Grafo di navigazione tra le schermate (Compose Navigation)
 │   └── screens/
-│       ├── home/          Schermata iniziale
-│       ├── importtrail/    Import file GPX
-│       ├── trailnavigation/ Navigazione GPS: freccia direzionale, mappa, zoom automatico
+│       ├── trailnavigation/ Schermata principale: mappa con posizione corrente,
+│       │                    import GPX opzionale, navigazione (freccia, zoom automatico)
 │       └── places/         Luoghi utili con filtro per categoria
 ├── data/
-│   ├── gpx/               Modello e parser dei file GPX
+│   ├── gpx/               Modello, parser dei file GPX e stato del percorso caricato
 │   ├── navigation/         Motore di navigazione (calcolo fuori-percorso, direzione)
 │   └── poi/                Modelli e client Overpass API per i luoghi utili
 └── location/               Servizio GPS in foreground + gestione permessi

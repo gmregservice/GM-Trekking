@@ -1,20 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">GM-Trekking</string>
-
-    <!-- Home -->
-    <string name="home_title">GM-Trekking</string>
-    <string name="home_import_gpx">Carica un percorso GPX</string>
     <string name="home_places_nearby">Luoghi utili</string>
 
-    <!-- Navigazione -->
+    <!-- Schermata principale (mappa) -->
+    <string name="map_load_gpx">Carica un percorso GPX</string>
+    <string name="map_change_gpx">Cambia percorso</string>
+    <string name="map_remove_track">Rimuovi percorso</string>
+    <string name="map_waiting_for_gps">In attesa del segnale GPS…</string>
+    <string name="map_gpx_load_error">Questo file non sembra un tracciato GPX valido. Prova con un altro file.</string>
+    <string name="map_gpx_open_error">Non riesco ad aprire il file scelto. Riprova.</string>
+
+    <!-- Navigazione (mostrata solo quando è caricato un percorso) -->
     <string name="nav_off_route_title">Sei fuori dal percorso</string>
     <string name="nav_off_route_instruction">Torna verso il tracciato: segui la freccia</string>
     <string name="nav_distance_to_next_meters">%1$d m</string>
     <string name="nav_distance_remaining">Mancano %1$s al termine del percorso</string>
-    <string name="nav_tracking_notification_text">Navigazione in corso: GM-Trekking sta seguendo la tua posizione</string>
-    <string name="nav_import_prompt">Scegli un file .gpx dal tuo dispositivo</string>
-    <string name="nav_start_navigation">Inizia la navigazione</string>
+    <string name="nav_tracking_notification_text">GM-Trekking sta seguendo la tua posizione</string>
 
     <!-- Luoghi utili: categorie (etichette semplici, non gergo tecnico) -->
     <string name="category_all">Tutti</string>

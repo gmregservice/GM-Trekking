@@ -27,29 +27,33 @@ import org.maplibre.geojson.Feature
 
 /**
  * Wrapper Compose per una MapView di MapLibre, con:
- *  - il tracciato caricato disegnato come linea;
- *  - la posizione corrente come cerchio;
+ *  - il tracciato caricato disegnato come linea, SE presente ([track] è opzionale:
+ *    l'app si apre mostrando solo la posizione corrente, senza obbligare a
+ *    caricare un percorso);
+ *  - la posizione corrente come cerchio, sempre visibile;
  *  - zoom automatico sulla posizione quando [autoZoomIn] è true (punti critici
- *    del percorso: bivi, tratti ravvicinati — vedi NavigationEngine.shouldZoomIn).
+ *    del percorso: bivi, tratti ravvicinati — vedi NavigationEngine.shouldZoomIn;
+ *    ha senso solo quando un percorso è caricato, il chiamante passa false altrimenti).
  *
  * NOTA IMPORTANTE: usa lo stile dimostrativo pubblico di MapLibre
  * (demotiles.maplibre.org), pensato solo per test — ha pochissimo dettaglio
  * cartografico. Prima di qualsiasi uso reale va sostituito con uno stile
  * mappa vero (es. OpenFreeMap, MapTiler, Stadia Maps, o un servizio tile
- * self-hosted), come discusso nell'analisi di fattibilità. Questo è anche il
- * punto del progetto con più probabilità di richiedere aggiustamenti alla
- * prima apertura in Android Studio, perché non è stato possibile compilarlo
- * in questo ambiente per verificarlo.
+ * self-hosted), come discusso nell'analisi di fattibilità.
  */
 @Composable
 fun TrekMapView(
-    track: GpxTrack,
+    track: GpxTrack?,
     currentLat: Double,
     currentLon: Double,
     autoZoomIn: Boolean,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapViewRef = remember { mutableStateOf<MapView?>(null) }
+    // Tiene traccia dell'ultimo tracciato per cui abbiamo già inquadrato la
+    // camera, per non "saltare" ad ogni ricomposizione ma solo quando il
+    // tracciato cambia davvero (es. l'utente carica un nuovo GPX).
+    val lastFittedTrack = remember { mutableStateOf<GpxTrack?>(null) }
 
     // MapView richiede il proprio ciclo di vita Android (onCreate/onStart/...).
     // Lo colleghiamo a quello della schermata Compose inoltrando gli eventi del
@@ -64,9 +68,25 @@ fun TrekMapView(
                 onResume()
                 getMapAsync { maplibreMap ->
                     maplibreMap.setStyle(Style.Builder().fromUri(DEMO_STYLE_URL)) { style ->
-                        addTrackLayer(style, track)
                         addPositionLayer(style, currentLat, currentLon)
-                        fitCameraToTrack(maplibreMap, track)
+                        if (track != null) {
+                            addTrackLayer(style, track)
+                            fitCameraToTrack(maplibreMap, track)
+                            lastFittedTrack.value = track
+                        } else {
+                            // Nessun percorso ancora caricato: centra semplicemente
+                            // sulla posizione corrente, con uno zoom da "sto guardando
+                            // la mia zona" piuttosto che il livello ravvicinato usato
+                            // in navigazione attiva.
+                            maplibreMap.moveCamera(
+                                CameraUpdateFactory.newCameraPosition(
+                                    CameraPosition.Builder()
+                                        .target(LatLng(currentLat, currentLon))
+                                        .zoom(15.0)
+                                        .build()
+                                )
+                            )
+                        }
                     }
                 }
             }
@@ -75,6 +95,17 @@ fun TrekMapView(
             view.getMapAsync { maplibreMap ->
                 val style = maplibreMap.style ?: return@getMapAsync
                 updatePositionLayer(style, currentLat, currentLon)
+                syncTrackLayer(style, track)
+
+                if (track != null && track != lastFittedTrack.value) {
+                    // Il tracciato è cambiato (nuovo GPX caricato, o rimosso e
+                    // ricaricato): inquadra il nuovo percorso per intero.
+                    fitCameraToTrack(maplibreMap, track)
+                    lastFittedTrack.value = track
+                } else if (track == null) {
+                    lastFittedTrack.value = null
+                }
+
                 if (autoZoomIn) {
                     maplibreMap.easeCamera(
                         CameraUpdateFactory.newCameraPosition(
@@ -126,6 +157,30 @@ private fun addTrackLayer(style: Style, track: GpxTrack) {
             PropertyFactory.lineWidth(4f),
         )
     )
+}
+
+/**
+ * Aggiunge, aggiorna o rimuove il layer del tracciato a seconda che [track]
+ * sia presente o meno — usata nella `update` di AndroidView, quindi deve
+ * essere sicura da chiamare ad ogni ricomposizione (idempotente).
+ */
+private fun syncTrackLayer(style: Style, track: GpxTrack?) {
+    val existingSource = style.getSourceAs<GeoJsonSource>(SOURCE_TRACK)
+
+    if (track == null) {
+        if (existingSource != null) {
+            style.removeLayer(LAYER_TRACK)
+            style.removeSource(SOURCE_TRACK)
+        }
+        return
+    }
+
+    if (existingSource != null) {
+        val points = track.points.map { Point.fromLngLat(it.longitude, it.latitude) }
+        existingSource.setGeoJson(LineString.fromLngLats(points))
+    } else {
+        addTrackLayer(style, track)
+    }
 }
 
 private fun addPositionLayer(style: Style, lat: Double, lon: Double) {

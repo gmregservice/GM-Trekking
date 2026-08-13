@@ -16,7 +16,7 @@ import kotlin.math.sqrt
  * 2. Calcola la distanza tra la posizione e quel punto: se supera la soglia
  *    di tolleranza, l'utente è "fuori percorso".
  * 3. Calcola direzione (bearing) e distanza verso il punto successivo del
- *    tracciato, per la freccia direzionale mostrata in TrailNavigationScreen.
+ *    tracciato, per la freccia direzionale mostrata in MainMapScreen.
  *
  * Le formule usano l'approssimazione equirettangolare (accurata a queste scale
  * di distanza, molto più leggera della formula di Haversine completa) e sono

@@ -43,6 +43,19 @@
         </activity>
 
         <!--
+          Schermata di crash (vedi crash/CrashHandler.kt). android:process=":crash"
+          la fa girare in un processo separato da quello principale: è importante,
+          perché CrashHandler termina il processo principale (quello andato in
+          crash) subito dopo averla aperta, e se girasse nello stesso processo
+          rischierebbe di essere chiusa insieme a lui prima di riuscire a comparire.
+        -->
+        <activity
+            android:name=".crash.CrashReportActivity"
+            android:exported="false"
+            android:process=":crash"
+            android:theme="@style/Theme.GMTrekking" />
+
+        <!--
           Servizio in foreground per il tracciamento GPS durante la navigazione.
           android:foregroundServiceType="location" è obbligatorio da Android 14 (API 34).
         -->
