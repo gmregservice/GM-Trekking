@@ -61,9 +61,18 @@ Questo scheletro è stato scritto senza poter compilare in un ambiente con SDK A
 
 Dato che l'app viene compilata e distribuita solo tramite GitHub Actions, senza Android Studio, non c'è modo di leggere Logcat in caso di crash. È stato aggiunto `crash/CrashHandler.kt`, installato in `GMTrekkingApp.onCreate`: se l'app va in crash, invece del messaggio generico di sistema si apre una schermata (`crash/CrashReportActivity.kt`, in un processo separato per restare affidabile anche se il processo principale è compromesso) che mostra il testo completo dell'errore, con un pulsante "Condividi" per mandarmelo direttamente. Se l'app si chiude di nuovo in modo anomalo, questa schermata dovrebbe comparire al posto del crash silenzioso — se anche questo non succede, è un segnale che vale la pena approfondire a parte.
 
+### Firma APK di debug instabile tra una build e l'altra (bug reale riscontrato)
+
+Dopo aver installato una prima APK compilata da GitHub Actions, le build successive sembravano "non installarsi": l'app apriva sempre la vecchia versione, senza errori visibili. Causa: GitHub Actions esegue ogni build su una macchina virtuale nuova ed effimera; senza una keystore di debug esplicita, Gradle ne genera una casuale ad ogni run, quindi ogni APK aveva una firma diversa. Android rifiuta di installare un'APK con firma diversa sopra un'app già presente con lo stesso nome pacchetto — a seconda del telefono, questo può dare un errore poco visibile o venire ignorato, lasciando l'app vecchia al suo posto senza che sia ovvio perché.
+
+Risolto committando una keystore di debug fissa (`keystore/debug.keystore`, non sensibile: firma solo build di debug, non pubblicabili su Play Store) e collegandola esplicitamente in `app/build.gradle.kts` (`signingConfigs.debug`). Da questa build in poi (versione 1.3), tutte le APK di debug avranno sempre la stessa firma e si aggiorneranno normalmente una sopra l'altra.
+
+**Importante, solo questa volta**: la nuova APK (1.3) ha una firma diversa da qualunque versione precedente installata sul telefono (che usava una delle firme casuali generate prima del fix). Per installarla va prima disinstallata manualmente l'app attuale (tieni premuto sull'icona → Disinstalla), poi installata la nuova APK da zero. Dalle prossime build in poi non servirà più: basterà installare la nuova APK sopra quella vecchia, come un aggiornamento normale.
+
 ## Struttura del progetto
 
 ```
+keystore/debug.keystore   Firma di debug fissa per le build CI (vedi sopra)
 app/src/main/java/com/gmtrekking/app/
 ├── MainActivity.kt, GMTrekkingApp.kt
 ├── crash/                 Gestore di crash: mostra l'errore a schermo invece di chiudersi silenziosamente

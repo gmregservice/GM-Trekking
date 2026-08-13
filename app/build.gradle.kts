@@ -20,11 +20,30 @@ android {
         // release (usato da Android per capire se una APK è più recente di un'altra).
         // versionName: numero visibile all'utente (vedi anche BuildConfig.VERSION_NAME,
         // da mostrare nell'app — pianificato, non ancora implementato in UI).
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+    }
+
+    signingConfigs {
+        // Keystore di debug FISSA, committata in keystore/debug.keystore.
+        // Necessaria perché GitHub Actions esegue ogni build su una macchina
+        // nuova ed effimera: senza questa keystore esplicita, Gradle ne
+        // genera una casuale e diversa ad ogni run. Con una firma diversa,
+        // Android rifiuta di installare la nuova APK sopra quella già
+        // presente sul telefono (bug reale riscontrato: dopo aver installato
+        // una build, quelle successive sembravano "non installarsi" e
+        // l'app restava quella vecchia, senza un errore chiaro a schermo).
+        // Usando sempre questa stessa keystore, la firma resta identica tra
+        // una build e l'altra e l'installazione aggiorna l'app normalmente.
+        create("debug") {
+            storeFile = rootProject.file("keystore/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
@@ -35,6 +54,7 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             isDebuggable = true
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

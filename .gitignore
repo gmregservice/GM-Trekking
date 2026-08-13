@@ -11,9 +11,18 @@ local.properties
 *.hprof
 .kotlin/
 
-# Keystore (non versionare mai le chiavi di firma)
+# Keystore (non versionare mai le chiavi di firma di RELEASE)
 *.jks
 *.keystore
+
+# Eccezione voluta: keystore/debug.keystore è una keystore di solo DEBUG,
+# committata di proposito. Non firma nulla di pubblicabile (le build di
+# debug non possono essere caricate su Play Store); serve solo per far sì
+# che ogni build su GitHub Actions usi sempre la STESSA firma, altrimenti
+# ogni run genera una chiave casuale diversa e il telefono rifiuta di
+# aggiornare l'app già installata (bug reale riscontrato: le build
+# successive alla prima sembravano "non installarsi").
+!keystore/debug.keystore
 
 # Gradle wrapper jar: generato localmente da Android Studio o da `gradle wrapper`
 # (vedi README.md — non incluso in questo scheletro perché binario)
