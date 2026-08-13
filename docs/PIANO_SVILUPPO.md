@@ -58,6 +58,15 @@ Annotate su richiesta esplicita (agosto 2026), non ancora iniziate. Da affrontar
    - **Nota generale del percorso**: una sola nota testuale libera associata all'intero percorso (es. meteo del giorno, compagni di cammino, condizioni generali).
    - **Nota puntuale geolocalizzata**: come le foto, ma testuale — dalla mappa si crea una nota legata a un punto preciso (es. tratto pericoloso o mal segnalato), salvata con la posizione e evidenziata sulla mappa.
 
+#### Spunti dalla ricerca competitiva (Komoot, AllTrails, Wikiloc, Gaia GPS — agosto 2026)
+
+- **Tempo totale vs tempo in movimento**: Wikiloc mostra entrambi separatamente. Più utile del solo tempo totale (non gonfiato dalle soste) — da adottare per il punto 1.
+- **Dislivello — barometro + GPS ibrido**: il solo GPS sovrastima parecchio il dislivello (rumore verticale, es. +90m su un tratto pianeggiante); un sensore barometrico (se presente sul telefono, `SensorManager.TYPE_PRESSURE`) è molto più preciso ma va calibrato sull'altitudine GPS di partenza e deriva con il meteo. Approccio consigliato: usare il barometro quando disponibile, calibrato a inizio percorso, con fallback al solo GPS (filtrato/smussato) se assente.
+- **Registrazione libera, non solo su GPX**: Gaia GPS, HiiKER, Footpath e altre permettono di premere "Avvia" e registrare senza una traccia precaricata — esattamente il caso "solo partenza/arrivo" del punto 1, non un'eccezione da gestire a parte.
+- **Foto come caso particolare di waypoint**: Gaia GPS non tratta le foto come una funzione separata dalle note puntuali — una foto è un waypoint con un'icona e, opzionalmente, un'immagine allegata. Conviene modellare punto 2 e la nota puntuale del punto 3 sulla stessa struttura dati (stesso "punto sul percorso", con testo e/o foto opzionali), invece di due sistemi paralleli.
+- **Icone per categoria sui punti**: Gaia GPS usa icone predefinite per tipo di punto (pericolo, acqua, bivio, campeggio...) invece di un unico marker generico — rende la mappa leggibile a colpo d'occhio ed è coerente con il principio guida "sicurezza e chiarezza" già alla base del progetto.
+- **Nota generale del percorso — occasione di differenziazione**: AllTrails delega esplicitamente il diario di viaggio (meteo, compagni, sensazioni) a un'app esterna, non lo integra. Farlo bene direttamente in GM-Trekking (punto 3) non è solo "mettersi alla pari" con la concorrenza ma un vero punto di distinzione.
+
 ## Fase 3 — Community e arricchimento dati (3-4 mesi dopo la Fase 2)
 
 - Condivisione di percorsi tra utenti.
