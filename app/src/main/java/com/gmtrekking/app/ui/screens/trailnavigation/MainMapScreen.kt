@@ -50,6 +50,7 @@ import com.gmtrekking.app.data.gpx.CurrentTrackHolder
 import com.gmtrekking.app.data.gpx.GpxParser
 import com.gmtrekking.app.data.navigation.NavigationEngine
 import com.gmtrekking.app.data.tracking.ActivityStorage
+import com.gmtrekking.app.data.tracking.PhotoStorage
 import com.gmtrekking.app.data.tracking.TrekRecorder
 import com.gmtrekking.app.location.LocationPermissions
 import com.gmtrekking.app.location.LocationTrackingService
@@ -195,6 +196,28 @@ fun MainMapScreen(
             TrekRecorder.onLocationUpdate(location)
         }
 
+        // Foto geolocalizzate (punto 3 del piano): delega lo scatto vero e
+        // proprio all'app Fotocamera di sistema tramite intent, invece di
+        // implementare una UI di scatto in-app — stessa scelta di semplicità
+        // già fatta altrove (Intent.ACTION_DIAL per i luoghi utili). Il nome
+        // del file creato da PhotoStorage.newPhotoTarget viene tenuto da
+        // parte finché la fotocamera non conferma lo scatto (callback del
+        // launcher), per sapere a quale ActivityWaypoint associarlo.
+        var pendingPhotoFileName by remember { mutableStateOf<String?>(null) }
+        val cameraLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.TakePicture(),
+        ) { success ->
+            val fileName = pendingPhotoFileName
+            pendingPhotoFileName = null
+            if (fileName == null) return@rememberLauncherForActivityResult
+            if (success) {
+                TrekRecorder.addPhotoWaypoint(location, fileName)
+            } else {
+                // Utente ha annullato lo scatto: elimina il file vuoto creato in anticipo.
+                PhotoStorage.discard(context, fileName)
+            }
+        }
+
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
 
             Box(
@@ -233,6 +256,12 @@ fun MainMapScreen(
                 },
                 onPause = { TrekRecorder.pause() },
                 onResume = { TrekRecorder.resume() },
+                onAddNote = { text -> TrekRecorder.addNoteWaypoint(location, text) },
+                onAddPhotoClick = {
+                    val (fileName, uri) = PhotoStorage.newPhotoTarget(context)
+                    pendingPhotoFileName = fileName
+                    cameraLauncher.launch(uri)
+                },
                 onStop = {
                     val completed = TrekRecorder.stop()
                     if (completed == null) {

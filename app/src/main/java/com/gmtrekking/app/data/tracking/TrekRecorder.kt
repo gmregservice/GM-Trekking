@@ -20,6 +20,11 @@ data class RecordingSnapshot(
     // Null finché il sensore contapassi non ha ancora dato una prima lettura
     // dopo l'avvio della registrazione (o non è disponibile/permesso negato).
     val stepCount: Int? = null,
+    // Numero di note/foto aggiunte finora in questa registrazione (punti 3 e
+    // 4 del piano) — solo per dare un riscontro immediato in UI ("Note: 2"),
+    // il contenuto vero e proprio vive nella lista waypoints di TrekRecorder
+    // e finisce in CompletedActivity solo al termine (stop()).
+    val waypointCount: Int = 0,
 )
 
 /**
@@ -63,6 +68,9 @@ object TrekRecorder {
     // fatti nel frattempo vengono esclusi spostando in avanti startStepCount
     // (stesso principio già usato per distanza e tempo in movimento).
     private var pauseStepAnchor: Int? = null
+    // Note puntuali e foto raccolte durante la registrazione in corso (punti
+    // 3 e 4 del piano) — vuota finché l'utente non ne aggiunge.
+    private var waypoints = mutableListOf<ActivityWaypoint>()
 
     fun start(location: Location) {
         val now = System.currentTimeMillis()
@@ -74,6 +82,7 @@ object TrekRecorder {
         pauseAnchorLon = null
         startStepCount = null
         pauseStepAnchor = null
+        waypoints = mutableListOf()
         _state.value = RecordingSnapshot(status = RecordingStatus.RECORDING)
     }
 
@@ -126,6 +135,7 @@ object TrekRecorder {
                 elevationGainMeters = current.elevationGainMeters,
                 points = points.toList(),
                 stepCount = current.stepCount,
+                waypoints = waypoints.toList(),
             )
         } else {
             null
@@ -185,6 +195,54 @@ object TrekRecorder {
         }
     }
 
+    /**
+     * Aggiunge una nota puntuale geolocalizzata alla posizione [location]
+     * (punto 4 del piano). Non fa nulla fuori da una registrazione, o se il
+     * testo è vuoto. Consentito sia durante RECORDING sia durante PAUSED —
+     * a differenza di distanza/tempo/passi, aggiungere una nota mentre ci si
+     * è fermati (es. per il panorama) è un caso d'uso legittimo, non un
+     * errore da escludere.
+     */
+    fun addNoteWaypoint(location: Location, note: String) {
+        if (note.isBlank()) return
+        addWaypoint(
+            ActivityWaypoint(
+                id = nextWaypointId(),
+                latitude = location.latitude,
+                longitude = location.longitude,
+                timestampMillis = System.currentTimeMillis(),
+                note = note.trim(),
+            )
+        )
+    }
+
+    /**
+     * Aggiunge una foto geolocalizzata alla posizione [location] (punto 3
+     * del piano). [photoFileName] è il nome del file già salvato da
+     * PhotoStorage.newPhotoTarget/la fotocamera — qui si registra solo il
+     * riferimento, non si tocca il file.
+     */
+    fun addPhotoWaypoint(location: Location, photoFileName: String) {
+        addWaypoint(
+            ActivityWaypoint(
+                id = nextWaypointId(),
+                latitude = location.latitude,
+                longitude = location.longitude,
+                timestampMillis = System.currentTimeMillis(),
+                photoFileName = photoFileName,
+            )
+        )
+    }
+
+    private fun addWaypoint(waypoint: ActivityWaypoint) {
+        val current = _state.value
+        if (current.status == RecordingStatus.IDLE) return
+        waypoints.add(waypoint)
+        _state.value = current.copy(waypointCount = waypoints.size)
+    }
+
+    private fun nextWaypointId(): String = "${System.currentTimeMillis()}_${waypoints.size}"
+
     private fun handlePausedUpdate(current: RecordingSnapshot, location: Location) {
         val anchorLat = pauseAnchorLat
         val anchorLon = pauseAnchorLon
@@ -237,6 +295,7 @@ object TrekRecorder {
         pauseAnchorLon = null
         startStepCount = null
         pauseStepAnchor = null
+        waypoints = mutableListOf()
         _state.value = RecordingSnapshot()
     }
 

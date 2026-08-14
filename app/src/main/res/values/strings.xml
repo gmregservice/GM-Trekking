@@ -28,6 +28,12 @@
     <string name="tracking_stop_confirm_message">Il percorso verrà salvato e la registrazione si fermerà. Continuare?</string>
     <string name="tracking_stop_confirm_confirm">Termina</string>
     <string name="tracking_stop_confirm_cancel">Annulla</string>
+    <string name="tracking_waypoint_count">Note e foto: %1$d</string>
+    <string name="tracking_add_note">Nota</string>
+    <string name="tracking_add_photo">Foto</string>
+    <string name="tracking_add_note_title">Aggiungi una nota</string>
+    <string name="tracking_add_note_placeholder">Es. tratto pericoloso, bel panorama…</string>
+    <string name="tracking_add_note_save">Salva</string>
 
     <!-- Cronologia percorsi (elenco + dettaglio con mappa) -->
     <string name="home_history">Cronologia percorsi</string>
@@ -37,6 +43,16 @@
     <string name="history_item_steps_unavailable">Passi non disponibili</string>
     <string name="history_detail_title">Dettaglio percorso</string>
     <string name="history_detail_not_found">Percorso non trovato.</string>
+    <string name="history_delete">Elimina percorso</string>
+    <string name="history_delete_confirm_title">Eliminare questo percorso?</string>
+    <string name="history_delete_confirm_message">Il percorso, con le eventuali note e foto associate, verrà eliminato definitivamente.</string>
+    <string name="history_delete_confirm_confirm">Elimina</string>
+    <string name="history_delete_confirm_cancel">Annulla</string>
+    <string name="history_general_note_label">Nota generale del percorso</string>
+    <string name="history_general_note_placeholder">Meteo, compagni di cammino, condizioni generali…</string>
+    <string name="history_general_note_save">Salva nota</string>
+    <string name="history_waypoints_label">Note e foto sul percorso</string>
+    <string name="history_waypoint_photo_description">Foto scattata durante il percorso</string>
 
     <!-- Navigazione fra schermate -->
     <string name="nav_back_to_map">Torna alla mappa principale</string>

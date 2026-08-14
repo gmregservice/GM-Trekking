@@ -1,0 +1,73 @@
+package com.gmtrekking.app.data.tracking
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.core.content.FileProvider
+import java.io.File
+
+/**
+ * Foto associate ai punti del percorso (ActivityWaypoint), salvate nella
+ * cartella privata dell'app — stesso principio già seguito per il resto
+ * della registrazione (JSON locale, nessun servizio esterno, vedi
+ * ActivityStorage.kt): niente cloud, niente account, tutto sul telefono.
+ *
+ * Le foto vengono scattate delegando all'app Fotocamera di sistema (intent
+ * `ACTION_IMAGE_CAPTURE`), non con l'API Camera direttamente: questo evita
+ * di dover richiedere il permesso CAMERA e di scrivere/mantenere una UI di
+ * scatto — scelta deliberata di semplicità, coerente con l'uso di
+ * `Intent.ACTION_DIAL` invece di chiamare direttamente per i luoghi utili.
+ * Per scrivere il risultato in un file nostro (non solo l'anteprima a bassa
+ * risoluzione restituita di default) serve un Uri condivisibile con l'app
+ * Fotocamera: da qui il FileProvider (vedi AndroidManifest.xml e
+ * res/xml/file_paths.xml).
+ */
+object PhotoStorage {
+    private const val PHOTOS_DIR_NAME = "activity_photos"
+
+    fun photoFile(context: Context, fileName: String): File =
+        File(File(context.filesDir, PHOTOS_DIR_NAME), fileName)
+
+    /**
+     * Crea un nuovo file vuoto pronto per la fotocamera e restituisce il suo
+     * nome (da passare a TrekRecorder.addPhotoWaypoint una volta confermato
+     * lo scatto) e l'Uri condivisibile via FileProvider da passare
+     * all'intent ACTION_IMAGE_CAPTURE.
+     */
+    fun newPhotoTarget(context: Context): Pair<String, Uri> {
+        val dir = File(context.filesDir, PHOTOS_DIR_NAME).apply { mkdirs() }
+        val fileName = "photo_${System.currentTimeMillis()}.jpg"
+        val file = File(dir, fileName)
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        return fileName to uri
+    }
+
+    /** Da chiamare se l'utente annulla lo scatto: elimina il file vuoto creato da [newPhotoTarget]. */
+    fun discard(context: Context, fileName: String) {
+        runCatching { photoFile(context, fileName).delete() }
+    }
+
+    /**
+     * Carica una versione ridotta della foto per le anteprime in Cronologia,
+     * invece della risoluzione piena della fotocamera (spesso diversi MB):
+     * senza questo downscaling, mostrare più foto in una lista rischierebbe
+     * di esaurire la memoria disponibile all'app.
+     */
+    fun loadThumbnail(context: Context, fileName: String, reqSize: Int = 256): Bitmap? {
+        val file = photoFile(context, fileName)
+        if (!file.exists()) return null
+        return runCatching {
+            val boundsOnly = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, boundsOnly)
+
+            var sampleSize = 1
+            while (boundsOnly.outWidth / (sampleSize * 2) >= reqSize && boundsOnly.outHeight / (sampleSize * 2) >= reqSize) {
+                sampleSize *= 2
+            }
+
+            val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+            BitmapFactory.decodeFile(file.absolutePath, decodeOptions)
+        }.getOrNull()
+    }
+}

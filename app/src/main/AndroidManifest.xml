@@ -24,6 +24,17 @@
         android:name="android.hardware.location.gps"
         android:required="true" />
 
+    <!--
+      Foto geolocalizzate (punto 3 del piano): la fotocamera viene aperta
+      tramite intent verso l'app di sistema, non con l'API Camera diretta —
+      per questo NON serve il permesso CAMERA in manifest (lo gestisce l'app
+      Fotocamera). required="false": l'app deve restare utilizzabile anche
+      su un dispositivo senza fotocamera, semplicemente senza poter aggiungere foto.
+    -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <application
         android:name=".GMTrekkingApp"
         android:allowBackup="true"
@@ -66,6 +77,24 @@
             android:name=".location.LocationTrackingService"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <!--
+          FileProvider per condividere con l'app Fotocamera di sistema il file
+          dove salvare lo scatto (foto geolocalizzate, punto 3 del piano):
+          senza un Uri "content://" ottenuto così, l'app Fotocamera non può
+          scrivere in un file nella cartella privata di GM-Trekking, e
+          ACTION_IMAGE_CAPTURE restituirebbe solo un'anteprima a bassa
+          risoluzione invece della foto intera. Vedi data/tracking/PhotoStorage.kt.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

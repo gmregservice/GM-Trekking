@@ -8,10 +8,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,11 +46,19 @@ fun TrackingControls(
     onPause: () -> Unit,
     onResume: () -> Unit,
     onStop: () -> Unit,
+    onAddNote: (String) -> Unit,
+    onAddPhotoClick: () -> Unit,
 ) {
     // Evita di interrompere per errore una registrazione in corso: "Termina"
     // chiede sempre conferma prima di fermare davvero (richiesto esplicitamente,
     // agosto 2026 — prima il tap fermava la registrazione all'istante).
     var showStopConfirmation by remember { mutableStateOf(false) }
+    // Dialog per scrivere una nota puntuale (punto 4 del piano); la foto
+    // invece delega subito alla fotocamera di sistema tramite onAddPhotoClick
+    // (il vero scatto/salvataggio è gestito in MainMapScreen, che ha accesso
+    // al launcher della fotocamera e alla posizione corrente).
+    var showNoteDialog by remember { mutableStateOf(false) }
+    var noteText by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -107,7 +120,34 @@ fun TrackingControls(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                if (snapshot.waypointCount > 0) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.tracking_waypoint_count, snapshot.waypointCount),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+
+                // Note puntuali e foto (punti 3 e 4 del piano): disponibili sia
+                // durante la registrazione attiva sia in pausa — es. ci si può
+                // fermare per scattare una foto al panorama senza dover prima
+                // "terminare" nulla.
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(onClick = { noteText = ""; showNoteDialog = true }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Filled.EditNote, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+                        Text(stringResource(R.string.tracking_add_note))
+                    }
+                    OutlinedButton(onClick = onAddPhotoClick, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Filled.AddAPhoto, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+                        Text(stringResource(R.string.tracking_add_photo))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -127,6 +167,37 @@ fun TrackingControls(
                 }
             }
         }
+    }
+
+    if (showNoteDialog) {
+        AlertDialog(
+            onDismissRequest = { showNoteDialog = false },
+            title = { Text(stringResource(R.string.tracking_add_note_title)) },
+            text = {
+                OutlinedTextField(
+                    value = noteText,
+                    onValueChange = { noteText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(stringResource(R.string.tracking_add_note_placeholder)) },
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showNoteDialog = false
+                        onAddNote(noteText)
+                    },
+                    enabled = noteText.isNotBlank(),
+                ) {
+                    Text(stringResource(R.string.tracking_add_note_save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNoteDialog = false }) {
+                    Text(stringResource(R.string.tracking_stop_confirm_cancel))
+                }
+            },
+        )
     }
 
     if (showStopConfirmation) {

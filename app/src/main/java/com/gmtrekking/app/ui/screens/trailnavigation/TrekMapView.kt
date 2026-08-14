@@ -24,6 +24,7 @@ import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 import org.maplibre.geojson.Feature
+import org.maplibre.geojson.FeatureCollection
 
 /**
  * Wrapper Compose per una MapView di MapLibre, con:
@@ -43,6 +44,12 @@ import org.maplibre.geojson.Feature
  *    cerchio di posizione, per la Cronologia percorsi (ActivityDetailScreen),
  *    dove si rivede un percorso concluso e non ha senso mostrare "dove sono
  *    ora" mescolato a un tracciato del passato.
+ *  - [waypoints]: punti (lat, lon) delle note/foto geolocalizzate raccolte
+ *    durante la registrazione (punti 3 e 4 del piano), disegnati come cerchi
+ *    di colore diverso dalla posizione corrente — usato dal dettaglio della
+ *    Cronologia. Semplificazione deliberata: solo un indicatore "qui c'è una
+ *    nota/foto", non un'icona per tipo né un tocco per aprirla — il dettaglio
+ *    completo si legge nell'elenco sotto la mappa, non sulla mappa stessa.
  *
  * Stile mappa: OpenFreeMap ("liberty", tile.openfreemap.org), gratuito e senza
  * chiave API, dati OpenStreetMap. Sostituisce lo stile dimostrativo iniziale
@@ -61,6 +68,7 @@ fun TrekMapView(
     autoZoomIn: Boolean,
     recenterRequest: Int = 0,
     showCurrentPosition: Boolean = true,
+    waypoints: List<Pair<Double, Double>> = emptyList(),
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapViewRef = remember { mutableStateOf<MapView?>(null) }
@@ -108,6 +116,12 @@ fun TrekMapView(
                                 )
                             )
                         }
+                        if (waypoints.isNotEmpty()) {
+                            // Aggiunta per ultima: disegnata sopra alla linea del
+                            // tracciato, altrimenti i pallini rischierebbero di
+                            // restare nascosti nei punti in cui la linea ci passa sopra.
+                            addWaypointsLayer(style, waypoints)
+                        }
                     }
                 }
             }
@@ -119,6 +133,7 @@ fun TrekMapView(
                     updatePositionLayer(style, currentLat, currentLon)
                 }
                 syncTrackLayer(style, track)
+                syncWaypointsLayer(style, waypoints)
 
                 if (track != null && track != lastFittedTrack.value) {
                     // Il tracciato è cambiato (nuovo GPX caricato, o rimosso e
@@ -171,6 +186,8 @@ private const val SOURCE_TRACK = "gm-trekking-track-source"
 private const val LAYER_TRACK = "gm-trekking-track-layer"
 private const val SOURCE_POSITION = "gm-trekking-position-source"
 private const val LAYER_POSITION = "gm-trekking-position-layer"
+private const val SOURCE_WAYPOINTS = "gm-trekking-waypoints-source"
+private const val LAYER_WAYPOINTS = "gm-trekking-waypoints-layer"
 
 // Livelli di zoom standard dell'app: "d'insieme" (nessun percorso caricato,
 // o vista di partenza) e "di dettaglio" (navigazione attiva su un percorso,
@@ -222,6 +239,42 @@ private fun syncTrackLayer(style: Style, track: GpxTrack?) {
         existingSource.setGeoJson(LineString.fromLngLats(points))
     } else {
         addTrackLayer(style, track)
+    }
+}
+
+private fun waypointsFeatureCollection(waypoints: List<Pair<Double, Double>>): FeatureCollection {
+    val features = waypoints.map { (lat, lon) -> Feature.fromGeometry(Point.fromLngLat(lon, lat)) }
+    return FeatureCollection.fromFeatures(features)
+}
+
+private fun addWaypointsLayer(style: Style, waypoints: List<Pair<Double, Double>>) {
+    style.addSource(GeoJsonSource(SOURCE_WAYPOINTS, waypointsFeatureCollection(waypoints)))
+    style.addLayer(
+        CircleLayer(LAYER_WAYPOINTS, SOURCE_WAYPOINTS).withProperties(
+            PropertyFactory.circleColor("#E08A00"),
+            PropertyFactory.circleRadius(7f),
+            PropertyFactory.circleStrokeColor("#FFFFFF"),
+            PropertyFactory.circleStrokeWidth(2f),
+        )
+    )
+}
+
+/** Idempotente come syncTrackLayer: sicura da chiamare ad ogni ricomposizione. */
+private fun syncWaypointsLayer(style: Style, waypoints: List<Pair<Double, Double>>) {
+    val existingSource = style.getSourceAs<GeoJsonSource>(SOURCE_WAYPOINTS)
+
+    if (waypoints.isEmpty()) {
+        if (existingSource != null) {
+            style.removeLayer(LAYER_WAYPOINTS)
+            style.removeSource(SOURCE_WAYPOINTS)
+        }
+        return
+    }
+
+    if (existingSource != null) {
+        existingSource.setGeoJson(waypointsFeatureCollection(waypoints))
+    } else {
+        addWaypointsLayer(style, waypoints)
     }
 }
 

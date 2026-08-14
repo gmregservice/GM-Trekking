@@ -39,4 +39,29 @@ object ActivityStorage {
         val updated = current + activity
         File(context.filesDir, FILE_NAME).writeText(json.encodeToString(updated))
     }
+
+    /**
+     * Sostituisce il percorso con lo stesso id di [activity] con la versione
+     * aggiornata (usato per modificare la nota generale dal dettaglio — vedi
+     * ActivityDetailScreen.kt). Se l'id non esiste più non fa nulla.
+     */
+    suspend fun update(context: Context, activity: CompletedActivity) = withContext(Dispatchers.IO) {
+        val current = loadAll(context)
+        val updated = current.map { if (it.id == activity.id) activity else it }
+        File(context.filesDir, FILE_NAME).writeText(json.encodeToString(updated))
+    }
+
+    /**
+     * Elimina il percorso con id [activityId] dall'elenco salvato — richiesto
+     * esplicitamente (agosto 2026, punto 2 dei "Richiesta utente da
+     * sviluppare" in docs/PIANO_SVILUPPO.md). Non elimina le eventuali foto
+     * associate: la chiamante (ActivityDetailScreen) se ne occupa a parte,
+     * per poter mostrare un unico avviso di conferma prima di entrambe le
+     * cancellazioni.
+     */
+    suspend fun delete(context: Context, activityId: String) = withContext(Dispatchers.IO) {
+        val current = loadAll(context)
+        val updated = current.filterNot { it.id == activityId }
+        File(context.filesDir, FILE_NAME).writeText(json.encodeToString(updated))
+    }
 }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Espone al FileProvider (vedi AndroidManifest.xml) solo la sottocartella
+  "activity_photos" dentro la cartella privata dell'app (Context.filesDir),
+  usata da data/tracking/PhotoStorage.kt per le foto geolocalizzate — non
+  l'intero filesDir, per condividere il minimo necessario con l'app Fotocamera.
+-->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <files-path name="activity_photos" path="activity_photos/" />
+</paths>
