@@ -10,6 +10,7 @@
     <string name="map_waiting_for_gps">In attesa del segnale GPS…</string>
     <string name="map_gpx_load_error">Questo file non sembra un tracciato GPX valido. Prova con un altro file.</string>
     <string name="map_gpx_open_error">Non riesco ad aprire il file scelto. Riprova.</string>
+    <string name="map_recenter">Ricentra sulla mia posizione</string>
 
     <!-- Navigazione (mostrata solo quando è caricato un percorso) -->
     <string name="nav_off_route_title">Sei fuori dal percorso</string>

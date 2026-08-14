@@ -33,7 +33,12 @@ import org.maplibre.geojson.Feature
  *  - la posizione corrente come cerchio, sempre visibile;
  *  - zoom automatico sulla posizione quando [autoZoomIn] è true (punti critici
  *    del percorso: bivi, tratti ravvicinati — vedi NavigationEngine.shouldZoomIn;
- *    ha senso solo quando un percorso è caricato, il chiamante passa false altrimenti).
+ *    ha senso solo quando un percorso è caricato, il chiamante passa false altrimenti);
+ *  - ricentraggio manuale: incrementando [recenterRequest] (es. al tap di un
+ *    pulsante "Ricentra" nella schermata chiamante) la camera torna sulla
+ *    posizione corrente. Serve perché scorrendo la mappa per vedere cosa c'è
+ *    più avanti lungo il percorso, altrimenti non c'era modo di tornare sulla
+ *    propria posizione senza cercarla manualmente.
  *
  * Stile mappa: OpenFreeMap ("liberty", tile.openfreemap.org), gratuito e senza
  * chiave API, dati OpenStreetMap. Sostituisce lo stile dimostrativo iniziale
@@ -50,6 +55,7 @@ fun TrekMapView(
     currentLat: Double,
     currentLon: Double,
     autoZoomIn: Boolean,
+    recenterRequest: Int = 0,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapViewRef = remember { mutableStateOf<MapView?>(null) }
@@ -57,6 +63,11 @@ fun TrekMapView(
     // camera, per non "saltare" ad ogni ricomposizione ma solo quando il
     // tracciato cambia davvero (es. l'utente carica un nuovo GPX).
     val lastFittedTrack = remember { mutableStateOf<GpxTrack?>(null) }
+    // Ultimo valore di recenterRequest già gestito: un semplice contatore che
+    // il chiamante incrementa ad ogni tap sul pulsante "Ricentra". Confrontarlo
+    // con l'ultimo valore visto è il modo standard in Compose per reagire a un
+    // "evento" (non a un valore continuo) dentro la callback update di AndroidView.
+    val lastHandledRecenterRequest = remember { mutableStateOf(0) }
 
     // MapView richiede il proprio ciclo di vita Android (onCreate/onStart/...).
     // Lo colleghiamo a quello della schermata Compose inoltrando gli eventi del
@@ -85,7 +96,7 @@ fun TrekMapView(
                                 CameraUpdateFactory.newCameraPosition(
                                     CameraPosition.Builder()
                                         .target(LatLng(currentLat, currentLon))
-                                        .zoom(15.0)
+                                        .zoom(ZOOM_OVERVIEW)
                                         .build()
                                 )
                             )
@@ -110,14 +121,16 @@ fun TrekMapView(
                 }
 
                 if (autoZoomIn) {
-                    maplibreMap.easeCamera(
-                        CameraUpdateFactory.newCameraPosition(
-                            CameraPosition.Builder()
-                                .target(LatLng(currentLat, currentLon))
-                                .zoom(17.0)
-                                .build()
-                        )
-                    )
+                    easeCameraToPosition(maplibreMap, currentLat, currentLon, ZOOM_DETAIL)
+                }
+
+                if (recenterRequest != lastHandledRecenterRequest.value) {
+                    // Ricentraggio manuale (pulsante "Ricentra"): stesso livello di
+                    // zoom "di dettaglio" usato durante la navigazione attiva se un
+                    // percorso è caricato, altrimenti quello "d'insieme" di partenza.
+                    val zoom = if (track != null) ZOOM_DETAIL else ZOOM_OVERVIEW
+                    easeCameraToPosition(maplibreMap, currentLat, currentLon, zoom)
+                    lastHandledRecenterRequest.value = recenterRequest
                 }
             }
         },
@@ -149,6 +162,23 @@ private const val SOURCE_TRACK = "gm-trekking-track-source"
 private const val LAYER_TRACK = "gm-trekking-track-layer"
 private const val SOURCE_POSITION = "gm-trekking-position-source"
 private const val LAYER_POSITION = "gm-trekking-position-layer"
+
+// Livelli di zoom standard dell'app: "d'insieme" (nessun percorso caricato,
+// o vista di partenza) e "di dettaglio" (navigazione attiva su un percorso,
+// punti critici, ricentraggio manuale con un percorso caricato).
+private const val ZOOM_OVERVIEW = 15.0
+private const val ZOOM_DETAIL = 17.0
+
+private fun easeCameraToPosition(map: MapLibreMap, lat: Double, lon: Double, zoom: Double) {
+    map.easeCamera(
+        CameraUpdateFactory.newCameraPosition(
+            CameraPosition.Builder()
+                .target(LatLng(lat, lon))
+                .zoom(zoom)
+                .build()
+        )
+    )
+}
 
 private fun addTrackLayer(style: Style, track: GpxTrack) {
     val points = track.points.map { Point.fromLngLat(it.longitude, it.latitude) }

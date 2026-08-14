@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -60,6 +62,10 @@ fun MainMapScreen(
     val track by CurrentTrackHolder.track.collectAsState()
     val currentLocation by LocationTrackingService.locationUpdates.collectAsState()
     var gpxError by remember { mutableStateOf<String?>(null) }
+    // Contatore incrementato dal pulsante "Ricentra": TrekMapView osserva i
+    // cambi di valore per riportare la camera sulla posizione corrente (vedi
+    // il commento su recenterRequest in TrekMapView.kt).
+    var recenterRequest by remember { mutableStateOf(0) }
 
     val gpxPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -144,7 +150,20 @@ fun MainMapScreen(
                     currentLat = location.latitude,
                     currentLon = location.longitude,
                     autoZoomIn = navState?.shouldZoomIn ?: false,
+                    recenterRequest = recenterRequest,
                 )
+
+                // "Ricentra": scorrendo la mappa per vedere cosa c'è più avanti
+                // lungo il percorso, altrimenti non ci sarebbe modo di tornare
+                // sulla propria posizione senza cercarla manualmente.
+                FloatingActionButton(
+                    onClick = { recenterRequest++ },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
+                ) {
+                    Icon(Icons.Filled.MyLocation, contentDescription = stringResource(R.string.map_recenter))
+                }
             }
 
             gpxError?.let { message ->
