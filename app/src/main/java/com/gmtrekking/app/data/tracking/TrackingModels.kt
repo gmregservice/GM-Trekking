@@ -31,4 +31,9 @@ data class CompletedActivity(
     val movingTimeMillis: Long,
     val elevationGainMeters: Double,
     val points: List<TrackedPoint>,
+    // Null se il sensore contapassi non è disponibile sul dispositivo o il
+    // permesso ACTIVITY_RECOGNITION non è stato concesso (vedi TrekRecorder).
+    // Default a null per restare compatibile con i file salvati dalle
+    // versioni precedenti, che non avevano questo campo.
+    val stepCount: Int? = null,
 )

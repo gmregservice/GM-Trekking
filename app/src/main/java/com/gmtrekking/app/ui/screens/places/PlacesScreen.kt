@@ -18,6 +18,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -40,6 +41,7 @@ import com.gmtrekking.app.R
 import com.gmtrekking.app.data.poi.Poi
 import com.gmtrekking.app.location.LocationPermissions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Place
 
 /**
@@ -53,6 +55,7 @@ import androidx.compose.material.icons.filled.Place
 @SuppressLint("MissingPermission") // il permesso viene verificato/richiesto prima di ogni chiamata a location
 @Composable
 fun PlacesScreen(
+    onBack: () -> Unit,
     viewModel: PlacesViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -89,7 +92,19 @@ fun PlacesScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.home_places_nearby)) }) }
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.home_places_nearby)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.nav_back_to_map),
+                        )
+                    }
+                },
+            )
+        }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
 

@@ -17,6 +17,9 @@
     <!-- Richiesta da Android 13+ per mostrare la notifica del servizio in foreground -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Sensore contapassi durante la registrazione del cammino: richiesta solo da Android 10+ -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
     <uses-feature
         android:name="android.hardware.location.gps"
         android:required="true" />

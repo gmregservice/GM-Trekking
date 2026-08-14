@@ -26,6 +26,14 @@ object LocationPermissions {
     fun notificationPermissionIfNeeded(): String? =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.POST_NOTIFICATIONS else null
 
+    /**
+     * Permesso per leggere il sensore contapassi (Sensor.TYPE_STEP_COUNTER),
+     * richiesto solo da Android 10 (API 29) in su — prima non serviva alcun
+     * permesso per questo sensore.
+     */
+    fun activityRecognitionPermissionIfNeeded(): String? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) Manifest.permission.ACTIVITY_RECOGNITION else null
+
     fun hasForegroundLocationPermission(context: Context): Boolean =
         foregroundLocationPermissions().any {
             ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
@@ -33,4 +41,10 @@ object LocationPermissions {
 
     fun hasBackgroundLocationPermission(context: Context): Boolean =
         ContextCompat.checkSelfPermission(context, backgroundLocationPermission()) == PackageManager.PERMISSION_GRANTED
+
+    /** true anche su Android < 10, dove questo permesso non esiste/non serve. */
+    fun hasActivityRecognitionPermission(context: Context): Boolean =
+        activityRecognitionPermissionIfNeeded()?.let {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        } ?: true
 }

@@ -17,6 +17,9 @@ data class RecordingSnapshot(
     // probabile dimenticanza di aver premuto "Riprendi" (vedi il punto 1
     // dei "Richiesta utente da sviluppare" in docs/PIANO_SVILUPPO.md).
     val possiblyForgottenPause: Boolean = false,
+    // Null finché il sensore contapassi non ha ancora dato una prima lettura
+    // dopo l'avvio della registrazione (o non è disponibile/permesso negato).
+    val stepCount: Int? = null,
 )
 
 /**
@@ -48,6 +51,18 @@ object TrekRecorder {
     private var accumulatedMovingMillis = 0L
     private var pauseAnchorLat: Double? = null
     private var pauseAnchorLon: Double? = null
+    // Lettura cumulativa del sensore contapassi (passi dall'ultimo riavvio del
+    // telefono) all'avvio della registrazione: i passi dell'attività sono la
+    // differenza fra la lettura corrente e questa. Null finché non arriva
+    // ancora nessuna lettura dal sensore dopo lo start.
+    private var startStepCount: Int? = null
+    // Ultima lettura grezza del sensore vista, aggiornata sempre (anche in
+    // pausa/idle): serve per calcolare quanti passi "saltare" al resume.
+    private var latestRawStepTotal: Int? = null
+    // Lettura grezza del sensore al momento della pausa: alla ripresa, i passi
+    // fatti nel frattempo vengono esclusi spostando in avanti startStepCount
+    // (stesso principio già usato per distanza e tempo in movimento).
+    private var pauseStepAnchor: Int? = null
 
     fun start(location: Location) {
         val now = System.currentTimeMillis()
@@ -57,6 +72,8 @@ object TrekRecorder {
         accumulatedMovingMillis = 0L
         pauseAnchorLat = null
         pauseAnchorLon = null
+        startStepCount = null
+        pauseStepAnchor = null
         _state.value = RecordingSnapshot(status = RecordingStatus.RECORDING)
     }
 
@@ -66,6 +83,7 @@ object TrekRecorder {
         val last = points.lastOrNull()
         pauseAnchorLat = last?.latitude
         pauseAnchorLon = last?.longitude
+        pauseStepAnchor = latestRawStepTotal
         _state.value = current.copy(status = RecordingStatus.PAUSED, possiblyForgottenPause = false)
     }
 
@@ -75,6 +93,15 @@ object TrekRecorder {
         lastPointTimeMillis = System.currentTimeMillis()
         pauseAnchorLat = null
         pauseAnchorLon = null
+
+        val pausedAtStep = pauseStepAnchor
+        val nowStep = latestRawStepTotal
+        val start = startStepCount
+        if (pausedAtStep != null && nowStep != null && start != null) {
+            startStepCount = start + (nowStep - pausedAtStep)
+        }
+        pauseStepAnchor = null
+
         _state.value = current.copy(status = RecordingStatus.RECORDING, possiblyForgottenPause = false)
     }
 
@@ -98,6 +125,7 @@ object TrekRecorder {
                 movingTimeMillis = current.movingTimeMillis,
                 elevationGainMeters = current.elevationGainMeters,
                 points = points.toList(),
+                stepCount = current.stepCount,
             )
         } else {
             null
@@ -123,6 +151,37 @@ object TrekRecorder {
             RecordingStatus.IDLE -> Unit
             RecordingStatus.PAUSED -> handlePausedUpdate(current, location)
             RecordingStatus.RECORDING -> handleRecordingUpdate(current, location)
+        }
+    }
+
+    /**
+     * Da chiamare ad ogni lettura del sensore `Sensor.TYPE_STEP_COUNTER`
+     * (contatore cumulativo dei passi dall'ultimo riavvio del telefono — il
+     * chiamante, in MainMapScreen, registra il listener e inoltra qui il
+     * valore grezzo). La lettura grezza viene sempre memorizzata (serve al
+     * calcolo dei passi da escludere quando si riprende da una pausa), ma i
+     * passi dell'attività aumentano solo mentre lo stato è RECORDING, in
+     * linea con distanza e tempo in movimento.
+     */
+    fun onStepCountSensorUpdate(totalStepsSinceBoot: Int) {
+        latestRawStepTotal = totalStepsSinceBoot
+        val current = _state.value
+        if (current.status != RecordingStatus.RECORDING) return
+
+        val start = startStepCount
+        if (start == null) {
+            // Prima lettura dopo l'avvio: diventa il punto di riferimento,
+            // da qui in poi 0 passi finché non arrivano nuove letture.
+            startStepCount = totalStepsSinceBoot
+            if (current.stepCount != 0) {
+                _state.value = current.copy(stepCount = 0)
+            }
+            return
+        }
+
+        val steps = (totalStepsSinceBoot - start).coerceAtLeast(0)
+        if (steps != current.stepCount) {
+            _state.value = current.copy(stepCount = steps)
         }
     }
 
@@ -176,6 +235,8 @@ object TrekRecorder {
         accumulatedMovingMillis = 0L
         pauseAnchorLat = null
         pauseAnchorLon = null
+        startStepCount = null
+        pauseStepAnchor = null
         _state.value = RecordingSnapshot()
     }
 

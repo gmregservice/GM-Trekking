@@ -75,9 +75,11 @@ Risolto committando una keystore di debug fissa (`keystore/debug.keystore`, non 
 
 ### Registrazione del cammino effettuato
 
-Aggiunta in `MainMapScreen.kt` (componente `TrackingControls.kt`), indipendente dal percorso GPX caricato come guida: si può registrare seguendo una traccia oppure partendo semplicemente con "Avvia registrazione", senza bisogno di un file GPX. Pulsanti Avvia / Pausa / Riprendi / Termina; durante la registrazione mostra distanza e tempo in movimento in tempo reale; se durante una pausa il GPS rileva che ci si sta comunque spostando, compare un avviso per ricordare di premere "Riprendi". Al termine salva il percorso (tempo totale, tempo in movimento, distanza, dislivello) su un file JSON nella cartella privata dell'app (`data/tracking/ActivityStorage.kt`).
+Aggiunta in `MainMapScreen.kt` (componente `TrackingControls.kt`), indipendente dal percorso GPX caricato come guida: si può registrare seguendo una traccia oppure partendo semplicemente con "Avvia registrazione", senza bisogno di un file GPX. Pulsanti Avvia / Pausa / Riprendi / Termina (con richiesta di conferma prima di terminare davvero, per non interrompere per errore); durante la registrazione mostra distanza, tempo in movimento e conteggio passi in tempo reale; se durante una pausa il GPS rileva che ci si sta comunque spostando, compare un avviso per ricordare di premere "Riprendi". Al termine salva il percorso (tempo totale, tempo in movimento, distanza, dislivello, passi) su un file JSON nella cartella privata dell'app (`data/tracking/ActivityStorage.kt`).
 
-**Non ancora fatto**: non c'è ancora una schermata per rivedere l'elenco dei percorsi salvati — i dati non vanno persi, ma al momento non c'è un punto in app per consultarli. È il passo naturale successivo su questa funzionalità (vedi `docs/PIANO_SVILUPPO.md`).
+**Conteggio passi**: sensore hardware `Sensor.TYPE_STEP_COUNTER`, letto in `MainMapScreen.kt` e inoltrato a `TrekRecorder`. Richiede il permesso `ACTIVITY_RECOGNITION` (solo Android 10+, richiesto insieme a quello di localizzazione); se il sensore manca sul dispositivo o il permesso non è concesso, il conteggio resta assente ("Passi non disponibili") senza bloccare il resto della registrazione.
+
+**Cronologia percorsi** (`ui/screens/history/`): elenco (`ActivityHistoryScreen.kt`) dei percorsi salvati, più recenti prima, con dettaglio (`ActivityDetailScreen.kt`) che disegna il tracciato sulla mappa riusando `TrekMapView.kt` in modalità sola lettura. Raggiungibile dalla nuova icona nella barra in alto della mappa principale.
 
 **Scelte per contenere il rischio di questo incremento**: persistenza su file JSON invece di Room (evita di introdurre un nuovo plugin Gradle per l'elaborazione delle annotazioni, con relativo rischio di un'altra incompatibilità di versioni scoperta solo in CI); dislivello calcolato dal solo GPS con una soglia minima per segmento per limitare il rumore verticale, senza integrazione con il barometro del telefono; "tempo in movimento" oggi è "tempo totale meno le pause manuali", non un rilevamento automatico dei tratti fermi. Dettagli e possibili miglioramenti futuri in `docs/PIANO_SVILUPPO.md`.
 
@@ -94,7 +96,8 @@ app/src/main/java/com/gmtrekking/app/
 │   └── screens/
 │       ├── trailnavigation/ Schermata principale: mappa con posizione corrente,
 │       │                    import GPX opzionale, navigazione (freccia, zoom automatico)
-│       └── places/         Luoghi utili con filtro per categoria
+│       ├── places/         Luoghi utili con filtro per categoria
+│       └── history/         Cronologia percorsi: elenco + dettaglio con mappa
 ├── data/
 │   ├── gpx/               Modello, parser dei file GPX e stato del percorso caricato
 │   ├── navigation/         Motore di navigazione (calcolo fuori-percorso, direzione)

@@ -8,11 +8,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -36,6 +42,11 @@ fun TrackingControls(
     onResume: () -> Unit,
     onStop: () -> Unit,
 ) {
+    // Evita di interrompere per errore una registrazione in corso: "Termina"
+    // chiede sempre conferma prima di fermare davvero (richiesto esplicitamente,
+    // agosto 2026 — prima il tap fermava la registrazione all'istante).
+    var showStopConfirmation by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -77,6 +88,16 @@ fun TrackingControls(
                     style = MaterialTheme.typography.bodyMedium,
                 )
 
+                // Passi: null finché il sensore non ha ancora dato una prima
+                // lettura (o non è disponibile/permesso negato) — vedi TrekRecorder.
+                snapshot.stepCount?.let { steps ->
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.tracking_steps, steps),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+
                 if (snapshot.possiblyForgottenPause) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -100,12 +121,33 @@ fun TrackingControls(
                             Text(stringResource(R.string.tracking_pause))
                         }
                     }
-                    Button(onClick = onStop, modifier = Modifier.weight(1f)) {
+                    Button(onClick = { showStopConfirmation = true }, modifier = Modifier.weight(1f)) {
                         Text(stringResource(R.string.tracking_stop))
                     }
                 }
             }
         }
+    }
+
+    if (showStopConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showStopConfirmation = false },
+            title = { Text(stringResource(R.string.tracking_stop_confirm_title)) },
+            text = { Text(stringResource(R.string.tracking_stop_confirm_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showStopConfirmation = false
+                    onStop()
+                }) {
+                    Text(stringResource(R.string.tracking_stop_confirm_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStopConfirmation = false }) {
+                    Text(stringResource(R.string.tracking_stop_confirm_cancel))
+                }
+            },
+        )
     }
 }
 

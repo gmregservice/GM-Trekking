@@ -1,6 +1,10 @@
 package com.gmtrekking.app.ui.screens.trailnavigation
 
 import android.content.Intent
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -14,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
@@ -27,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -61,6 +67,7 @@ import kotlin.math.roundToInt
 @Composable
 fun MainMapScreen(
     onPlacesNearbyClick: () -> Unit,
+    onHistoryClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val track by CurrentTrackHolder.track.collectAsState()
@@ -70,6 +77,11 @@ fun MainMapScreen(
     // cambi di valore per riportare la camera sulla posizione corrente (vedi
     // il commento su recenterRequest in TrekMapView.kt).
     var recenterRequest by remember { mutableStateOf(0) }
+    // Aggiornato dopo la richiesta permessi, per (ri)registrare il sensore
+    // contapassi non appena concesso (vedi DisposableEffect più sotto).
+    var hasActivityRecognition by remember {
+        mutableStateOf(LocationPermissions.hasActivityRecognitionPermission(context))
+    }
 
     val gpxPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -93,17 +105,45 @@ fun MainMapScreen(
         if (results.values.any { it }) {
             startTrackingService(context)
         }
+        hasActivityRecognition = LocationPermissions.hasActivityRecognitionPermission(context)
     }
 
     // La posizione corrente serve fin dall'apertura dell'app (per mostrarla
     // sulla mappa), non solo quando è caricato un percorso: il servizio di
     // localizzazione parte appena il permesso è concesso, indipendentemente
-    // dalla presenza di un tracciato.
+    // dalla presenza di un tracciato. Il permesso per il contapassi viene
+    // richiesto nello stesso momento, per non aggiungere un secondo passaggio
+    // separato solo per una funzionalità accessoria.
     LaunchedEffect(Unit) {
         if (LocationPermissions.hasForegroundLocationPermission(context)) {
             startTrackingService(context)
         } else {
-            permissionLauncher.launch(LocationPermissions.foregroundLocationPermissions())
+            val toRequest = LocationPermissions.foregroundLocationPermissions() +
+                listOfNotNull(LocationPermissions.activityRecognitionPermissionIfNeeded())
+            permissionLauncher.launch(toRequest)
+        }
+    }
+
+    // Sensore contapassi (Sensor.TYPE_STEP_COUNTER): letture inoltrate a
+    // TrekRecorder, che le usa solo mentre una registrazione è in corso (vedi
+    // il punto 1/2 dei "Richiesta utente da sviluppare" in
+    // docs/PIANO_SVILUPPO.md). Assente su alcuni dispositivi o senza permesso
+    // concesso: in quel caso semplicemente non si registra nulla, senza
+    // bloccare il resto dell'app.
+    DisposableEffect(hasActivityRecognition) {
+        val sensorManager = context.getSystemService(SensorManager::class.java)
+        val stepSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                TrekRecorder.onStepCountSensorUpdate(event.values[0].toInt())
+            }
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+        }
+        if (hasActivityRecognition && sensorManager != null && stepSensor != null) {
+            sensorManager.registerListener(listener, stepSensor, SensorManager.SENSOR_DELAY_NORMAL)
+        }
+        onDispose {
+            sensorManager?.unregisterListener(listener)
         }
     }
 
@@ -112,6 +152,9 @@ fun MainMapScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
+                    IconButton(onClick = onHistoryClick) {
+                        Icon(Icons.Filled.History, contentDescription = stringResource(R.string.home_history))
+                    }
                     IconButton(onClick = onPlacesNearbyClick) {
                         Icon(Icons.Filled.Place, contentDescription = stringResource(R.string.home_places_nearby))
                     }

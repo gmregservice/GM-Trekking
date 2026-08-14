@@ -39,6 +39,10 @@ import org.maplibre.geojson.Feature
  *    posizione corrente. Serve perché scorrendo la mappa per vedere cosa c'è
  *    più avanti lungo il percorso, altrimenti non c'era modo di tornare sulla
  *    propria posizione senza cercarla manualmente.
+ *  - modalità "sola lettura" ([showCurrentPosition] = false): nasconde il
+ *    cerchio di posizione, per la Cronologia percorsi (ActivityDetailScreen),
+ *    dove si rivede un percorso concluso e non ha senso mostrare "dove sono
+ *    ora" mescolato a un tracciato del passato.
  *
  * Stile mappa: OpenFreeMap ("liberty", tile.openfreemap.org), gratuito e senza
  * chiave API, dati OpenStreetMap. Sostituisce lo stile dimostrativo iniziale
@@ -56,6 +60,7 @@ fun TrekMapView(
     currentLon: Double,
     autoZoomIn: Boolean,
     recenterRequest: Int = 0,
+    showCurrentPosition: Boolean = true,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapViewRef = remember { mutableStateOf<MapView?>(null) }
@@ -82,7 +87,9 @@ fun TrekMapView(
                 onResume()
                 getMapAsync { maplibreMap ->
                     maplibreMap.setStyle(Style.Builder().fromUri(MAP_STYLE_URL)) { style ->
-                        addPositionLayer(style, currentLat, currentLon)
+                        if (showCurrentPosition) {
+                            addPositionLayer(style, currentLat, currentLon)
+                        }
                         if (track != null) {
                             addTrackLayer(style, track)
                             fitCameraToTrack(maplibreMap, track)
@@ -108,7 +115,9 @@ fun TrekMapView(
         update = { view ->
             view.getMapAsync { maplibreMap ->
                 val style = maplibreMap.style ?: return@getMapAsync
-                updatePositionLayer(style, currentLat, currentLon)
+                if (showCurrentPosition) {
+                    updatePositionLayer(style, currentLat, currentLon)
+                }
                 syncTrackLayer(style, track)
 
                 if (track != null && track != lastFittedTrack.value) {
