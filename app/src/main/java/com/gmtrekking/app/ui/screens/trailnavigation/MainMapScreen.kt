@@ -214,7 +214,7 @@ fun MainMapScreen(
                 TrekRecorder.addPhotoWaypoint(location, fileName)
             } else {
                 // Utente ha annullato lo scatto: elimina il file vuoto creato in anticipo.
-                PhotoStorage.discard(context, fileName)
+                PhotoStorage.delete(context, fileName)
             }
         }
 

@@ -43,8 +43,13 @@ object PhotoStorage {
         return fileName to uri
     }
 
-    /** Da chiamare se l'utente annulla lo scatto: elimina il file vuoto creato da [newPhotoTarget]. */
-    fun discard(context: Context, fileName: String) {
+    /**
+     * Elimina il file foto [fileName]: usata sia quando l'utente annulla uno
+     * scatto (file vuoto appena creato da [newPhotoTarget]) sia quando un
+     * intero percorso viene cancellato dalla Cronologia e bisogna rimuovere
+     * anche le foto dei suoi waypoint (vedi ActivityDetailScreen.kt).
+     */
+    fun delete(context: Context, fileName: String) {
         runCatching { photoFile(context, fileName).delete() }
     }
 
