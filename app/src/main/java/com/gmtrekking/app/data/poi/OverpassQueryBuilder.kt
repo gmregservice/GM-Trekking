@@ -48,9 +48,24 @@ object OverpassQueryBuilder {
         val tagPairs = effectiveCategories.flatMap { tagsFor(it) }.distinct()
         val around = "around:$radiusMeters,$centerLat,$centerLon"
 
-        val filters = tagPairs.joinToString(separator = "\n") { (key, value) ->
-            "  node[\"$key\"=\"$value\"]($around);\n  way[\"$key\"=\"$value\"]($around);"
-        }
+        // Raggruppate per chiave OSM (es. tutte le "tourism=..." insieme) e
+        // unite in un solo filtro con espressione regolare sui valori, invece
+        // di ripetere il filtro spaziale "around" una volta per ogni singola
+        // coppia chiave/valore: con la categoria "Tutti" erano fino a 16
+        // filtri around separati (8 coppie x node/way) — la parte più lenta
+        // della query, essendo una ricerca spaziale — ridotti a 4 (2 chiavi
+        // x node/way). Stesso risultato, query più veloce: mitiga gli HTTP
+        // 504 Gateway Timeout osservati su query con tutte le categorie
+        // (bug reale riscontrato su dispositivo, agosto 2026). I valori dei
+        // tag sono stringhe semplici (lettere/underscore), sicure da unire
+        // in una regex senza escaping.
+        val filters = tagPairs
+            .groupBy(keySelector = { it.first }, valueTransform = { it.second })
+            .entries
+            .joinToString(separator = "\n") { (key, values) ->
+                val valuePattern = values.distinct().joinToString("|")
+                "  node[\"$key\"~\"^($valuePattern)$\"]($around);\n  way[\"$key\"~\"^($valuePattern)$\"]($around);"
+            }
 
         return """
             [out:json][timeout:$timeoutSeconds];
