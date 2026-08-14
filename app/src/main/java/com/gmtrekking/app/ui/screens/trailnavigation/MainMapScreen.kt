@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
@@ -48,7 +49,10 @@ import androidx.compose.ui.unit.dp
 import com.gmtrekking.app.R
 import com.gmtrekking.app.data.gpx.CurrentTrackHolder
 import com.gmtrekking.app.data.gpx.GpxParser
+import com.gmtrekking.app.data.gpx.GpxTrack
+import com.gmtrekking.app.data.gpx.TrackPoint
 import com.gmtrekking.app.data.navigation.NavigationEngine
+import com.gmtrekking.app.data.navigation.PoiNavigationHolder
 import com.gmtrekking.app.data.tracking.ActivityStorage
 import com.gmtrekking.app.data.tracking.PhotoStorage
 import com.gmtrekking.app.data.tracking.TrekRecorder
@@ -69,9 +73,14 @@ import kotlin.math.roundToInt
 fun MainMapScreen(
     onPlacesNearbyClick: () -> Unit,
     onHistoryClick: () -> Unit,
+    onEmergencyClick: () -> Unit,
 ) {
     val context = LocalContext.current
-    val track by CurrentTrackHolder.track.collectAsState()
+    val loadedTrack by CurrentTrackHolder.track.collectAsState()
+    // Navigazione verso un luogo utile selezionato da PlacesScreen (punto 6 del
+    // piano): indipendente dal percorso GPX caricato, non lo sovrascrive né lo
+    // perde — vedi PoiNavigationHolder.
+    val poiTarget by PoiNavigationHolder.target.collectAsState()
     val currentLocation by LocationTrackingService.locationUpdates.collectAsState()
     var gpxError by remember { mutableStateOf<String?>(null) }
     // Contatore incrementato dal pulsante "Ricentra": TrekMapView osserva i
@@ -159,6 +168,9 @@ fun MainMapScreen(
                     IconButton(onClick = onPlacesNearbyClick) {
                         Icon(Icons.Filled.Place, contentDescription = stringResource(R.string.home_places_nearby))
                     }
+                    IconButton(onClick = onEmergencyClick) {
+                        Icon(Icons.Filled.Warning, contentDescription = stringResource(R.string.home_emergency))
+                    }
                 },
             )
         }
@@ -179,7 +191,27 @@ fun MainMapScreen(
             return@Scaffold
         }
 
-        val engine = remember(track) { track?.let { NavigationEngine(it) } }
+        // Percorso usato per calcolare la navigazione mostrata in questa
+        // schermata: quello verso un luogo utile ha la priorità (punto 6 del
+        // piano), altrimenti quello GPX caricato come guida. Il primo punto è
+        // sempre la posizione corrente stessa (aggiornata ad ogni fix GPS): il
+        // punto più vicino del "percorso" è quindi sempre quello, la distanza
+        // dal tracciato resta sempre 0 e l'avviso "fuori percorso" (pensato
+        // per un vero tracciato da seguire) non scatta mai per questa modalità
+        // — un effetto collaterale voluto della scelta di riusare
+        // NavigationEngine invece di scriverne uno dedicato per questo caso.
+        val navigationTrack = remember(poiTarget, loadedTrack, location.latitude, location.longitude) {
+            poiTarget?.let { target ->
+                GpxTrack(
+                    name = target.name,
+                    points = listOf(
+                        TrackPoint(location.latitude, location.longitude),
+                        TrackPoint(target.latitude, target.longitude),
+                    ),
+                )
+            } ?: loadedTrack
+        }
+        val engine = remember(navigationTrack) { navigationTrack?.let { NavigationEngine(it) } }
         val navState = remember(engine, location.latitude, location.longitude) {
             engine?.update(location.latitude, location.longitude)
         }
@@ -221,18 +253,25 @@ fun MainMapScreen(
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
 
             Box(
-                modifier = if (track == null) {
+                modifier = if (navigationTrack == null) {
                     Modifier.fillMaxWidth().weight(1f)
                 } else {
                     Modifier.fillMaxWidth().height(280.dp)
                 }
             ) {
                 TrekMapView(
-                    track = track,
+                    // Il layer del tracciato/il "fit" automatico della camera restano
+                    // legati solo al vero percorso GPX caricato (loadedTrack), MAI al
+                    // percorso sintetico verso un luogo utile: quest'ultimo cambia ad
+                    // ogni fix GPS (il primo punto è sempre la posizione corrente), e
+                    // ri-inquadrare la camera ad ogni aggiornamento sarebbe un fastidioso
+                    // "salto" continuo della mappa durante la navigazione verso un luogo.
+                    track = loadedTrack,
                     currentLat = location.latitude,
                     currentLon = location.longitude,
                     autoZoomIn = navState?.shouldZoomIn ?: false,
                     recenterRequest = recenterRequest,
+                    waypoints = poiTarget?.let { listOf(it.latitude to it.longitude) } ?: emptyList(),
                 )
 
                 // "Ricentra": scorrendo la mappa per vedere cosa c'è più avanti
@@ -318,6 +357,14 @@ fun MainMapScreen(
                     }
                 }
 
+                poiTarget?.let { target ->
+                    Text(
+                        text = stringResource(R.string.poi_nav_title, target.name),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+                    )
+                }
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -340,23 +387,37 @@ fun MainMapScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = stringResource(
-                            R.string.nav_distance_remaining,
-                            formatDistance(navState.distanceRemainingMeters),
-                        ),
+                        text = if (poiTarget != null) {
+                            stringResource(R.string.poi_nav_distance_remaining, formatDistance(navState.distanceRemainingMeters))
+                        } else {
+                            stringResource(R.string.nav_distance_remaining, formatDistance(navState.distanceRemainingMeters))
+                        },
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    TextButton(onClick = { gpxPicker.launch(arrayOf("*/*")) }) {
-                        Text(stringResource(R.string.map_change_gpx))
+                if (poiTarget != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    ) {
+                        TextButton(
+                            onClick = { PoiNavigationHolder.target.value = null },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.poi_nav_stop))
+                        }
                     }
-                    TextButton(onClick = { CurrentTrackHolder.track.value = null }) {
-                        Text(stringResource(R.string.map_remove_track))
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        TextButton(onClick = { gpxPicker.launch(arrayOf("*/*")) }) {
+                            Text(stringResource(R.string.map_change_gpx))
+                        }
+                        TextButton(onClick = { CurrentTrackHolder.track.value = null }) {
+                            Text(stringResource(R.string.map_remove_track))
+                        }
                     }
                 }
             } else {

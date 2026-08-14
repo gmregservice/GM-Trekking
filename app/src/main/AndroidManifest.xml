@@ -20,6 +20,14 @@
     <!-- Sensore contapassi durante la registrazione del cammino: richiesta solo da Android 10+ -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
+    <!--
+      Pulsante Emergenza (punto 7 del piano): invio automatico di un SMS con
+      le coordinate GPS ai contatti configurati. Nessuna restrizione da Play
+      Store da considerare: l'app non viene distribuita lì (vedi
+      docs/PIANO_SVILUPPO.md, punto 7 — fattibilità).
+    -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+
     <uses-feature
         android:name="android.hardware.location.gps"
         android:required="true" />

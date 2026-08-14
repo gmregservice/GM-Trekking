@@ -86,6 +86,12 @@ Aggiunta in `MainMapScreen.kt` (componente `TrackingControls.kt`), indipendente 
 
 **Scelte per contenere il rischio di questo incremento**: persistenza su file JSON invece di Room (evita di introdurre un nuovo plugin Gradle per l'elaborazione delle annotazioni, con relativo rischio di un'altra incompatibilità di versioni scoperta solo in CI); dislivello calcolato dal solo GPS con una soglia minima per segmento per limitare il rumore verticale, senza integrazione con il barometro del telefono; "tempo in movimento" oggi è "tempo totale meno le pause manuali", non un rilevamento automatico dei tratti fermi; il dettaglio del percorso usa una `Column` scorrevole invece di `LazyColumn` per evitare il rischio, noto in Compose, di veder distrutta/ricreata la mappa (una `AndroidView` pesante) se fosse il primo elemento di una lista "lazy". Dettagli e possibili miglioramenti futuri in `docs/PIANO_SVILUPPO.md`.
 
+**Luoghi utili: distanza, navigazione, telefono cliccabile** (`ui/screens/places/PlacesScreen.kt`): ogni luogo mostra la distanza dalla posizione corrente e, quando disponibile, il numero di telefono cliccabile (apre il tastierino con `Intent.ACTION_DIAL`). Toccando un luogo si avvia la navigazione verso di lì: `PoiNavigationHolder` (nuovo, `data/navigation/`) tiene solo il luogo scelto, separato dal percorso GPX eventualmente caricato (`CurrentTrackHolder`). `MainMapScreen.kt` costruisce al volo un tracciato sintetico di due punti (posizione corrente + luogo scelto) e lo passa a `NavigationEngine`, riusando la stessa freccia direzionale/distanza già scritte per i tracciati GPX senza toccarle. Se un percorso GPX è già caricato, prima di avviare la navigazione verso un luogo compare un avviso di conferma; terminando la navigazione verso il luogo, quello GPX riprende da solo (non viene mai toccato).
+
+**Pulsante Emergenza** (`ui/screens/emergency/`): due schermate dedicate, raggiungibili da un'icona nella mappa principale, non da un pulsante diretto (per non rischiare di premerlo per errore). "Emergenza" (`EmergencyScreen.kt`) mostra le coordinate GPS correnti, l'indirizzo quando disponibile (`data/emergency/ReverseGeocoder.kt`, richiede dati — spesso assente in montagna, gestito come caso normale), i numeri di emergenza locali (112 sempre + supplementari, rilevati offline da `data/emergency/EmergencyCountryLookup.kt` — vedi nota sotto), e un pulsante che invia un SMS automatico con la posizione a tutti i contatti configurati (`data/emergency/EmergencyMessenger.kt`, permesso `SEND_SMS`), più una scorciatoia WhatsApp per contatto (apertura manuale, un tocco per contatto — WhatsApp non offre invio automatico per utenti privati). "Impostazioni" (`EmergencySettingsScreen.kt`) gestisce l'elenco dei contatti, salvato in JSON (`data/emergency/EmergencyContactsStorage.kt`, stesso pattern di `ActivityStorage.kt`).
+
+**Numeri di emergenza locali — semplificazione dichiarata**: il rilevamento del paese per i numeri supplementari (oltre al 112) usa un rettangolo (bounding box) approssimativo per una ventina di paesi europei, non un confronto con i confini reali — non è stato possibile scaricare un dataset di confini offline nell'ambiente usato per scrivere questo codice (nessun accesso di rete a GitHub/CDN dal sandbox, verificato con più tentativi a domini diversi). Vicino a un confine il paese rilevato può quindi sbagliare; impatto limitato perché il 112 resta sempre il numero principale mostrato e funziona in tutta Europa a prescindere. Dettagli in `EmergencyCountryLookup.kt` e in `docs/PIANO_SVILUPPO.md` (punto 7).
+
 ## Struttura del progetto
 
 ```
@@ -99,13 +105,15 @@ app/src/main/java/com/gmtrekking/app/
 │   └── screens/
 │       ├── trailnavigation/ Schermata principale: mappa con posizione corrente,
 │       │                    import GPX opzionale, navigazione (freccia, zoom automatico)
-│       ├── places/         Luoghi utili con filtro per categoria
-│       └── history/         Cronologia percorsi: elenco + dettaglio con mappa
+│       ├── places/         Luoghi utili con filtro per categoria, distanza, telefono, navigazione
+│       ├── history/         Cronologia percorsi: elenco + dettaglio con mappa
+│       └── emergency/       Emergenza: invio SOS + Impostazioni contatti
 ├── data/
 │   ├── gpx/               Modello, parser dei file GPX e stato del percorso caricato
-│   ├── navigation/         Motore di navigazione (calcolo fuori-percorso, direzione)
+│   ├── navigation/         Motore di navigazione (calcolo fuori-percorso, direzione) e navigazione verso un luogo utile
 │   ├── poi/                Modelli e client Overpass API per i luoghi utili
-│   └── tracking/           Registrazione del cammino effettuato (Avvia/Pausa/Termina) e salvataggio
+│   ├── tracking/           Registrazione del cammino effettuato (Avvia/Pausa/Termina) e salvataggio
+│   └── emergency/           Contatti, messaggio SOS (SMS/WhatsApp), numeri locali offline, reverse geocoding
 └── location/               Servizio GPS in foreground + gestione permessi
 ```
 

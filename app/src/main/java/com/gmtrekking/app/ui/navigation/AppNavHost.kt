@@ -7,6 +7,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.gmtrekking.app.ui.screens.emergency.EmergencyScreen
+import com.gmtrekking.app.ui.screens.emergency.EmergencySettingsScreen
 import com.gmtrekking.app.ui.screens.history.ActivityDetailScreen
 import com.gmtrekking.app.ui.screens.history.ActivityHistoryScreen
 import com.gmtrekking.app.ui.screens.places.PlacesScreen
@@ -19,6 +21,8 @@ private object Routes {
     const val HISTORY_DETAIL_ARG = "activityId"
     const val HISTORY_DETAIL = "history_detail/{activityId}"
     fun historyDetail(activityId: String) = "history_detail/$activityId"
+    const val EMERGENCY = "emergency"
+    const val EMERGENCY_SETTINGS = "emergency_settings"
 }
 
 /**
@@ -39,6 +43,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             MainMapScreen(
                 onPlacesNearbyClick = { navController.navigate(Routes.PLACES) },
                 onHistoryClick = { navController.navigate(Routes.HISTORY) },
+                onEmergencyClick = { navController.navigate(Routes.EMERGENCY) },
             )
         }
 
@@ -64,6 +69,17 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                     onBack = { navController.popBackStack() },
                 )
             }
+        }
+
+        composable(Routes.EMERGENCY) {
+            EmergencyScreen(
+                onBack = { navController.popBackStack() },
+                onSettingsClick = { navController.navigate(Routes.EMERGENCY_SETTINGS) },
+            )
+        }
+
+        composable(Routes.EMERGENCY_SETTINGS) {
+            EmergencySettingsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

@@ -77,4 +77,47 @@
 
     <!-- Permessi -->
     <string name="permission_location_rationale">GM-Trekking ha bisogno della posizione per guidarti lungo il percorso caricato.</string>
+
+    <!-- Luoghi utili: distanza, telefono cliccabile, navigazione verso un luogo (punto 6) -->
+    <string name="places_navigate_hint">Tocca un luogo per avviare la navigazione verso di lì.</string>
+    <string name="places_call_phone">Chiama questo numero</string>
+    <string name="poi_nav_leaving_route_title">Stai lasciando il percorso</string>
+    <string name="poi_nav_leaving_route_message">Hai un percorso caricato come guida. Avviare la navigazione verso \"%1$s\" lo metterà in pausa temporaneamente: potrai riprenderlo terminando la navigazione verso il luogo. Continuare?</string>
+    <string name="poi_nav_leaving_route_confirm">Naviga comunque</string>
+    <string name="poi_nav_leaving_route_cancel">Annulla</string>
+
+    <!-- Navigazione verso un luogo utile, mostrata in MainMapScreen (punto 6) -->
+    <string name="poi_nav_title">Stai andando verso: %1$s</string>
+    <string name="poi_nav_distance_remaining">Mancano %1$s per arrivare</string>
+    <string name="poi_nav_stop">Termina navigazione verso il luogo</string>
+
+    <!-- Emergenza (punto 7) -->
+    <string name="home_emergency">Emergenza</string>
+    <string name="emergency_title">Emergenza</string>
+    <string name="emergency_position_label">La tua posizione</string>
+    <string name="emergency_position_unavailable">Posizione non ancora disponibile. Assicurati che il GPS sia attivo.</string>
+    <string name="emergency_address_unavailable">Indirizzo non disponibile (serve una connessione dati, spesso assente in montagna)</string>
+    <string name="emergency_numbers_label">Numeri di emergenza</string>
+    <string name="emergency_number_european_label">Numero unico d\'emergenza europeo</string>
+    <string name="emergency_send_button">Invia richiesta di aiuto via SMS</string>
+    <string name="emergency_no_contacts_warning">Configura almeno un contatto in Impostazioni per poter inviare la richiesta.</string>
+    <string name="emergency_contacts_label">Contatti configurati</string>
+    <string name="emergency_go_to_settings">Vai a Impostazioni per aggiungere un contatto</string>
+    <string name="emergency_send_confirm_title">Inviare la richiesta di aiuto?</string>
+    <string name="emergency_send_confirm_message">Verrà inviato un SMS con la tua posizione a %1$d contatti configurati. Continuare?</string>
+    <string name="emergency_send_confirm_confirm">Invia</string>
+    <string name="emergency_sent_confirmation">Richiesta inviata via SMS a %1$d contatti.</string>
+    <string name="emergency_call_contact">Chiama questo contatto</string>
+    <string name="emergency_whatsapp_contact">Apri WhatsApp verso questo contatto</string>
+
+    <!-- Impostazioni (contenitore generale, per ora solo contatti d'emergenza) -->
+    <string name="emergency_settings_title">Impostazioni</string>
+    <string name="emergency_settings_empty">Nessun contatto configurato ancora. Aggiungine uno con il pulsante +.</string>
+    <string name="emergency_settings_add">Aggiungi contatto</string>
+    <string name="emergency_settings_delete">Elimina contatto</string>
+    <string name="emergency_settings_add_title">Nuovo contatto</string>
+    <string name="emergency_settings_edit_title">Modifica contatto</string>
+    <string name="emergency_settings_label_field">Etichetta (es. \"Moglie\", \"Rifugio\")</string>
+    <string name="emergency_settings_phone_field">Numero di telefono</string>
+    <string name="emergency_settings_save">Salva</string>
 </resources>
