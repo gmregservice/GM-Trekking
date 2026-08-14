@@ -1,11 +1,13 @@
 package com.gmtrekking.app.data.poi
 
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.Headers
 import retrofit2.http.POST
+import java.util.concurrent.TimeUnit
 
 /**
  * Client per Overpass API (dati OpenStreetMap): gratuita, nessuna chiave richiesta.
@@ -42,8 +44,22 @@ interface OverpassApiService {
         const val BASE_URL = "https://overpass.kumi.systems/api/"
 
         fun create(): OverpassApiService {
+            // Timeout più lunghi del default di OkHttp (10s): le query Overpass
+            // dichiarano esse stesse "[timeout:25]" lato server (vedi
+            // OverpassQueryBuilder) — con il default di 10s, OkHttp abbandona
+            // la richiesta (SocketTimeoutException) ben prima che il server
+            // abbia il tempo di rispondere, anche quando la query andrebbe a
+            // buon fine. Bug reale riscontrato su dispositivo (agosto 2026).
+            // 35s lascia un margine oltre i 25s dichiarati nella query.
+            val client = OkHttpClient.Builder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(35, TimeUnit.SECONDS)
+                .writeTimeout(15, TimeUnit.SECONDS)
+                .build()
+
             return Retrofit.Builder()
                 .baseUrl(BASE_URL)
+                .client(client)
                 .addConverterFactory(ScalarsConverterFactory.create())
                 .build()
                 .create(OverpassApiService::class.java)
