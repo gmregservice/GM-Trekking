@@ -73,6 +73,14 @@ Risolto committando una keystore di debug fissa (`keystore/debug.keystore`, non 
 
 **Importante, solo questa volta**: la nuova APK (1.3) ha una firma diversa da qualunque versione precedente installata sul telefono (che usava una delle firme casuali generate prima del fix). Per installarla va prima disinstallata manualmente l'app attuale (tieni premuto sull'icona → Disinstalla), poi installata la nuova APK da zero. Dalle prossime build in poi non servirà più: basterà installare la nuova APK sopra quella vecchia, come un aggiornamento normale.
 
+### Registrazione del cammino effettuato
+
+Aggiunta in `MainMapScreen.kt` (componente `TrackingControls.kt`), indipendente dal percorso GPX caricato come guida: si può registrare seguendo una traccia oppure partendo semplicemente con "Avvia registrazione", senza bisogno di un file GPX. Pulsanti Avvia / Pausa / Riprendi / Termina; durante la registrazione mostra distanza e tempo in movimento in tempo reale; se durante una pausa il GPS rileva che ci si sta comunque spostando, compare un avviso per ricordare di premere "Riprendi". Al termine salva il percorso (tempo totale, tempo in movimento, distanza, dislivello) su un file JSON nella cartella privata dell'app (`data/tracking/ActivityStorage.kt`).
+
+**Non ancora fatto**: non c'è ancora una schermata per rivedere l'elenco dei percorsi salvati — i dati non vanno persi, ma al momento non c'è un punto in app per consultarli. È il passo naturale successivo su questa funzionalità (vedi `docs/PIANO_SVILUPPO.md`).
+
+**Scelte per contenere il rischio di questo incremento**: persistenza su file JSON invece di Room (evita di introdurre un nuovo plugin Gradle per l'elaborazione delle annotazioni, con relativo rischio di un'altra incompatibilità di versioni scoperta solo in CI); dislivello calcolato dal solo GPS con una soglia minima per segmento per limitare il rumore verticale, senza integrazione con il barometro del telefono; "tempo in movimento" oggi è "tempo totale meno le pause manuali", non un rilevamento automatico dei tratti fermi. Dettagli e possibili miglioramenti futuri in `docs/PIANO_SVILUPPO.md`.
+
 ## Struttura del progetto
 
 ```
@@ -90,7 +98,8 @@ app/src/main/java/com/gmtrekking/app/
 ├── data/
 │   ├── gpx/               Modello, parser dei file GPX e stato del percorso caricato
 │   ├── navigation/         Motore di navigazione (calcolo fuori-percorso, direzione)
-│   └── poi/                Modelli e client Overpass API per i luoghi utili
+│   ├── poi/                Modelli e client Overpass API per i luoghi utili
+│   └── tracking/           Registrazione del cammino effettuato (Avvia/Pausa/Termina) e salvataggio
 └── location/               Servizio GPS in foreground + gestione permessi
 ```
 

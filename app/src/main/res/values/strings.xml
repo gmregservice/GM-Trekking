@@ -12,6 +12,18 @@
     <string name="map_gpx_open_error">Non riesco ad aprire il file scelto. Riprova.</string>
     <string name="map_recenter">Ricentra sulla mia posizione</string>
 
+    <!-- Registrazione del cammino effettuato (indipendente da un percorso GPX caricato) -->
+    <string name="tracking_start">Avvia registrazione</string>
+    <string name="tracking_status_recording">Registrazione in corso</string>
+    <string name="tracking_status_paused">In pausa</string>
+    <string name="tracking_elapsed_time">Tempo in movimento: %1$s</string>
+    <string name="tracking_forgotten_pause_warning">Sembra che ti stia muovendo: hai dimenticato di premere \"Riprendi\"?</string>
+    <string name="tracking_pause">Pausa</string>
+    <string name="tracking_resume">Riprendi</string>
+    <string name="tracking_stop">Termina</string>
+    <string name="tracking_saved_summary">Percorso salvato: %1$s, %2$s in movimento, %3$d m di dislivello</string>
+    <string name="tracking_discarded_too_short">Registrazione troppo breve, non salvata.</string>
+
     <!-- Navigazione (mostrata solo quando è caricato un percorso) -->
     <string name="nav_off_route_title">Sei fuori dal percorso</string>
     <string name="nav_off_route_instruction">Torna verso il tracciato: segui la freccia</string>

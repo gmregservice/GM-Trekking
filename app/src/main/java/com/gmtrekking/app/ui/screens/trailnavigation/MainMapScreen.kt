@@ -32,6 +32,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,8 +43,11 @@ import com.gmtrekking.app.R
 import com.gmtrekking.app.data.gpx.CurrentTrackHolder
 import com.gmtrekking.app.data.gpx.GpxParser
 import com.gmtrekking.app.data.navigation.NavigationEngine
+import com.gmtrekking.app.data.tracking.ActivityStorage
+import com.gmtrekking.app.data.tracking.TrekRecorder
 import com.gmtrekking.app.location.LocationPermissions
 import com.gmtrekking.app.location.LocationTrackingService
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
@@ -136,6 +140,18 @@ fun MainMapScreen(
             engine?.update(location.latitude, location.longitude)
         }
 
+        // Registrazione del cammino effettuato: indipendente dal percorso GPX
+        // caricato come guida (funziona anche senza — vedi TrackingControls).
+        // Ogni nuovo fix GPS viene inoltrato a TrekRecorder, che internamente
+        // ignora l'aggiornamento se non è in corso una registrazione.
+        val recordingState by TrekRecorder.state.collectAsState()
+        val coroutineScope = rememberCoroutineScope()
+        var activitySavedMessage by remember { mutableStateOf<String?>(null) }
+
+        LaunchedEffect(location) {
+            TrekRecorder.onLocationUpdate(location)
+        }
+
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
 
             Box(
@@ -164,6 +180,40 @@ fun MainMapScreen(
                 ) {
                     Icon(Icons.Filled.MyLocation, contentDescription = stringResource(R.string.map_recenter))
                 }
+            }
+
+            TrackingControls(
+                snapshot = recordingState,
+                onStart = {
+                    activitySavedMessage = null
+                    TrekRecorder.start(location)
+                },
+                onPause = { TrekRecorder.pause() },
+                onResume = { TrekRecorder.resume() },
+                onStop = {
+                    val completed = TrekRecorder.stop()
+                    if (completed == null) {
+                        activitySavedMessage = context.getString(R.string.tracking_discarded_too_short)
+                    } else {
+                        coroutineScope.launch {
+                            ActivityStorage.save(context, completed)
+                            activitySavedMessage = context.getString(
+                                R.string.tracking_saved_summary,
+                                formatTrackingDistance(completed.distanceMeters),
+                                formatTrackingDuration(completed.movingTimeMillis),
+                                completed.elevationGainMeters.roundToInt(),
+                            )
+                        }
+                    }
+                },
+            )
+
+            activitySavedMessage?.let { message ->
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                )
             }
 
             gpxError?.let { message ->
