@@ -57,6 +57,9 @@
     <!-- Navigazione fra schermate -->
     <string name="nav_back_to_map">Torna alla mappa principale</string>
 
+    <!-- Azioni generiche condivise fra più schermate -->
+    <string name="action_retry">Riprova</string>
+
     <!-- Navigazione (mostrata solo quando è caricato un percorso) -->
     <string name="nav_off_route_title">Sei fuori dal percorso</string>
     <string name="nav_off_route_instruction">Torna verso il tracciato: segui la freccia</string>

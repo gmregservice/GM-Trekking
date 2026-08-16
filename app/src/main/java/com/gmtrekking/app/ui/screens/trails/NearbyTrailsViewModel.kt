@@ -27,7 +27,7 @@ class NearbyTrailsViewModel @JvmOverloads constructor(
     private val _uiState = MutableStateFlow(NearbyTrailsUiState())
     val uiState: StateFlow<NearbyTrailsUiState> = _uiState.asStateFlow()
 
-    fun loadNearby(centerLat: Double, centerLon: Double, radiusMeters: Int = 5000) {
+    fun loadNearby(centerLat: Double, centerLon: Double, radiusMeters: Int = 3000) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             try {

@@ -14,7 +14,11 @@ import kotlinx.serialization.json.Json
  * di sviluppo, con Room.
  */
 class PoiRepository(
-    private val api: OverpassApiService = OverpassApiService.create(),
+    // Di default esegue la query con tentativo automatico su più mirror
+    // Overpass in sequenza (vedi OverpassQueryExecutor.kt) — parametro
+    // iniettabile (funzione anziché un tipo concreto) per poter passare
+    // in test una funzione finta senza dover toccare la rete.
+    private val queryExecutor: suspend (String) -> String = OverpassQueryExecutor::execute,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -31,7 +35,7 @@ class PoiRepository(
             categories = categories,
         )
 
-        val rawResponse = api.query(query)
+        val rawResponse = queryExecutor(query)
         val parsed = json.decodeFromString(OverpassResponse.serializer(), rawResponse)
 
         parsed.elements.mapNotNull { element -> element.toPoiOrNull() }

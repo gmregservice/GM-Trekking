@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -169,7 +171,15 @@ fun PlacesScreen(
                     locationError != null -> Box(
                         modifier = Modifier.fillMaxSize().padding(24.dp),
                         contentAlignment = Alignment.Center,
-                    ) { Text(locationError!!, style = MaterialTheme.typography.bodyLarge) }
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(locationError!!, style = MaterialTheme.typography.bodyLarge)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(onClick = { locationError = null; fetchLocationAndLoad() }) {
+                                Text(stringResource(R.string.action_retry))
+                            }
+                        }
+                    }
 
                     uiState.isLoading -> Box(
                         modifier = Modifier.fillMaxSize(),
@@ -179,7 +189,20 @@ fun PlacesScreen(
                     uiState.errorMessage != null -> Box(
                         modifier = Modifier.fillMaxSize().padding(24.dp),
                         contentAlignment = Alignment.Center,
-                    ) { Text(uiState.errorMessage!!, style = MaterialTheme.typography.bodyLarge) }
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(uiState.errorMessage!!, style = MaterialTheme.typography.bodyLarge)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            // Riprova rifà anche la posizione (non solo la query Overpass):
+                            // innocuo se era già disponibile, utile se anche quella aveva
+                            // dato un problema momentaneo — un solo pulsante copre entrambi
+                            // i casi, senza dover distinguere la causa dell'errore per
+                            // l'utente (agosto 2026, segnalato come fallimento frequente).
+                            Button(onClick = { fetchLocationAndLoad() }) {
+                                Text(stringResource(R.string.action_retry))
+                            }
+                        }
+                    }
 
                     uiState.visiblePois.isEmpty() -> Box(
                         modifier = Modifier.fillMaxSize().padding(24.dp),

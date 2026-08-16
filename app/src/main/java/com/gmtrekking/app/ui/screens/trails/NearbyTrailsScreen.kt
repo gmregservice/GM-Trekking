@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -139,7 +141,15 @@ fun NearbyTrailsScreen(
             locationError != null -> Box(
                 modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text(locationError!!, style = MaterialTheme.typography.bodyLarge) }
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(locationError!!, style = MaterialTheme.typography.bodyLarge)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { locationError = null; fetchLocationAndLoad() }) {
+                        Text(stringResource(R.string.action_retry))
+                    }
+                }
+            }
 
             uiState.isLoading -> Box(
                 modifier = Modifier.fillMaxSize().padding(padding),
@@ -149,7 +159,19 @@ fun NearbyTrailsScreen(
             uiState.errorMessage != null -> Box(
                 modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text(uiState.errorMessage!!, style = MaterialTheme.typography.bodyLarge) }
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(uiState.errorMessage!!, style = MaterialTheme.typography.bodyLarge)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    // Stesso ragionamento di PlacesScreen.kt: un solo pulsante che rifà
+                    // sia la posizione sia la query, senza dover distinguere la causa
+                    // dell'errore per l'utente (agosto 2026, fallimento frequente segnalato
+                    // anche per questa schermata).
+                    Button(onClick = { fetchLocationAndLoad() }) {
+                        Text(stringResource(R.string.action_retry))
+                    }
+                }
+            }
 
             uiState.trails.isEmpty() -> Box(
                 modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
