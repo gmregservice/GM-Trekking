@@ -13,6 +13,7 @@ import com.gmtrekking.app.ui.screens.history.ActivityDetailScreen
 import com.gmtrekking.app.ui.screens.history.ActivityHistoryScreen
 import com.gmtrekking.app.ui.screens.places.PlacesScreen
 import com.gmtrekking.app.ui.screens.trailnavigation.MainMapScreen
+import com.gmtrekking.app.ui.screens.trails.NearbyTrailsScreen
 
 private object Routes {
     const val MAIN_MAP = "main_map"
@@ -23,6 +24,7 @@ private object Routes {
     fun historyDetail(activityId: String) = "history_detail/$activityId"
     const val EMERGENCY = "emergency"
     const val EMERGENCY_SETTINGS = "emergency_settings"
+    const val NEARBY_TRAILS = "nearby_trails"
 }
 
 /**
@@ -44,6 +46,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 onPlacesNearbyClick = { navController.navigate(Routes.PLACES) },
                 onHistoryClick = { navController.navigate(Routes.HISTORY) },
                 onEmergencyClick = { navController.navigate(Routes.EMERGENCY) },
+                onNearbyTrailsClick = { navController.navigate(Routes.NEARBY_TRAILS) },
             )
         }
 
@@ -80,6 +83,10 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
 
         composable(Routes.EMERGENCY_SETTINGS) {
             EmergencySettingsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.NEARBY_TRAILS) {
+            NearbyTrailsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

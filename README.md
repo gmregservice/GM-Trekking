@@ -57,6 +57,8 @@ Questo scheletro è stato scritto senza poter compilare in un ambiente con SDK A
 - **Prima ipotesi scartata — non era un problema di segnale/copertura**: inizialmente si era pensato a una connessione debole sul posto (mappa e luoghi utili sembravano falliti insieme), ma la mappa si è poi rivelata funzionante correttamente una volta installata la versione con lo stile OpenFreeMap: il problema residuo era solo ed esclusivamente l'HTTP 406 di Overpass API descritto sopra.
 - **Luoghi utili, dopo il fix dell'HTTP 406: "Dettaglio tecnico: SocketTimeoutException: timeout"**: la query Overpass dichiara essa stessa `[timeout:25]` (25 secondi) lato server (vedi `OverpassQueryBuilder`), ma il client Retrofit/OkHttp usava i timeout di default (10 secondi) — quindi la richiesta veniva abbandonata dal telefono ben prima che il server avesse anche solo il tempo di elaborarla, sempre e comunque, indipendentemente dalla qualità della connessione. Risolto in `OverpassApiService.kt` configurando un `OkHttpClient` con timeout più ampi (35s in lettura, oltre il margine dei 25s dichiarati nella query).
 - **Luoghi utili, dopo i due fix precedenti: "Dettaglio tecnico: HttpException: HTTP 504 Gateway Timeout"**: stavolta la richiesta arriva al server (non più un timeout lato client), ma il server stesso impiega troppo tempo a rispondere. Causa: la query per la categoria "Tutti" ripeteva il filtro spaziale `around` (la parte più costosa, una ricerca per raggio) una volta per ogni singola coppia chiave/valore OSM — fino a 16 filtri `around` separati in un'unica query. Risolto in `OverpassQueryBuilder.kt` raggruppando i valori per chiave OSM (es. tutti i `tourism=...` insieme) in un solo filtro con espressione regolare, riducendo a 4 i filtri `around` per la query più pesante (categoria "Tutti"): stesso risultato, query più leggera per il server.
+- **Conteggio passi sempre assente (home page e fine percorso "Passi non disponibili"), segnalato su dispositivo reale (v1.16)**: individuato via revisione del codice (senza accesso a Logcat) che la richiesta del permesso `ACTIVITY_RECOGNITION` era annidata nel ramo `else` del controllo sul permesso di localizzazione in `MainMapScreen.kt` — quindi veniva valutata solo quando la localizzazione non era ancora concessa. Chi aveva già dato il permesso di localizzazione prima dell'introduzione del conteggio passi (v1.12) non vedeva quindi **mai** richiesto `ACTIVITY_RECOGNITION`, e il sensore passi restava di conseguenza sempre non disponibile, senza errori visibili. Risolto disaccoppiando i due controlli permessi.
+- **Posizione ferma a schermo spento, ricentraggio manuale necessario allo sblocco, segnalato su dispositivo reale (v1.16)**: verificata l'architettura del servizio di localizzazione in foreground (`LocationTrackingService.kt`) — raccoglie correttamente la posizione anche a schermo spento, quindi il problema non era nella raccolta dati ma nella fotocamera della mappa, ferma all'ultimo punto inquadrato prima dello spegnimento. Risolto in `MainMapScreen.kt` con un `DisposableEffect` che osserva `Lifecycle.Event.ON_RESUME` (l'evento generato allo sblocco, con l'app già in primo piano) e ricentra automaticamente la mappa ad ogni sblocco.
 
 ### Modifiche al flusso dell'app
 
@@ -92,6 +94,8 @@ Aggiunta in `MainMapScreen.kt` (componente `TrackingControls.kt`), indipendente 
 
 **Numeri di emergenza locali — semplificazione dichiarata**: il rilevamento del paese per i numeri supplementari (oltre al 112) usa un rettangolo (bounding box) approssimativo per una ventina di paesi europei, non un confronto con i confini reali — non è stato possibile scaricare un dataset di confini offline nell'ambiente usato per scrivere questo codice (nessun accesso di rete a GitHub/CDN dal sandbox, verificato con più tentativi a domini diversi). Vicino a un confine il paese rilevato può quindi sbagliare; impatto limitato perché il 112 resta sempre il numero principale mostrato e funziona in tutta Europa a prescindere. Dettagli in `EmergencyCountryLookup.kt` e in `docs/PIANO_SVILUPPO.md` (punto 7).
 
+**Sentieri vicini + download GPX** (`ui/screens/trails/NearbyTrailsScreen.kt`, `data/trails/`): dalla mappa principale, elenco di sentieri OpenStreetMap (relazioni `route=hiking`) trovati entro 5 km dalla posizione corrente, con distanza dall'utente, lunghezza, tempo stimato (velocità media costante, senza dislivello — non disponibile nei dati usati) e difficoltà quando presente sul tag `sac_scale`. Da ogni sentiero si può partire subito come percorso guida (sostituisce l'eventuale GPX già caricato, senza conferma, stessa scelta già fatta per "Cambia percorso") oppure scaricarne una copia come vero file `.gpx` (`data/gpx/GpxWriter.kt`, tramite il selettore file di sistema). La geometria del sentiero viene ricostruita unendo le way membro della relazione OSM (`TrailRepository.stitchWays`), scegliendo per ciascuna l'orientamento che continua più vicino al punto precedente, perché le way OSM possono essere digitate in versi diversi senza garanzia di coerenza.
+
 ## Struttura del progetto
 
 ```
@@ -107,13 +111,15 @@ app/src/main/java/com/gmtrekking/app/
 │       │                    import GPX opzionale, navigazione (freccia, zoom automatico)
 │       ├── places/         Luoghi utili con filtro per categoria, distanza, telefono, navigazione
 │       ├── history/         Cronologia percorsi: elenco + dettaglio con mappa
-│       └── emergency/       Emergenza: invio SOS + Impostazioni contatti
+│       ├── emergency/       Emergenza: invio SOS + Impostazioni contatti
+│       └── trails/          Sentieri vicini: elenco + uso come guida/download GPX
 ├── data/
-│   ├── gpx/               Modello, parser dei file GPX e stato del percorso caricato
+│   ├── gpx/               Modello, parser/scrittore dei file GPX e stato del percorso caricato
 │   ├── navigation/         Motore di navigazione (calcolo fuori-percorso, direzione) e navigazione verso un luogo utile
 │   ├── poi/                Modelli e client Overpass API per i luoghi utili
 │   ├── tracking/           Registrazione del cammino effettuato (Avvia/Pausa/Termina) e salvataggio
-│   └── emergency/           Contatti, messaggio SOS (SMS/WhatsApp), numeri locali offline, reverse geocoding
+│   ├── emergency/           Contatti, messaggio SOS (SMS/WhatsApp), numeri locali offline, reverse geocoding
+│   └── trails/              Scoperta sentieri vicini: query Overpass, ricostruzione tracciato, difficoltà
 └── location/               Servizio GPS in foreground + gestione permessi
 ```
 

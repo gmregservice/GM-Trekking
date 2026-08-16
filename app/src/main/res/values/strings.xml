@@ -120,4 +120,22 @@
     <string name="emergency_settings_label_field">Etichetta (es. \"Moglie\", \"Rifugio\")</string>
     <string name="emergency_settings_phone_field">Numero di telefono</string>
     <string name="emergency_settings_save">Salva</string>
+
+    <!-- Sentieri vicini + download GPX (punto 5) -->
+    <string name="home_nearby_trails">Sentieri vicini</string>
+    <string name="nearby_trails_title">Sentieri vicini</string>
+    <string name="nearby_trails_empty">Nessun sentiero segnalato nelle vicinanze su OpenStreetMap.</string>
+    <string name="nearby_trails_length_label">Lunghezza: %1$s</string>
+    <string name="nearby_trails_estimated_time_label">Tempo stimato: %1$s</string>
+    <string name="nearby_trails_distance_from_you">A %1$s da te</string>
+    <string name="nearby_trails_use_as_guide">Usa come percorso guida</string>
+    <string name="nearby_trails_export_gpx">Scarica GPX</string>
+    <string name="nearby_trails_difficulty_unknown">Difficoltà non specificata</string>
+    <string name="nearby_trails_difficulty_hiking">Escursionistico</string>
+    <string name="nearby_trails_difficulty_mountain_hiking">Escursionistico per esperti</string>
+    <string name="nearby_trails_difficulty_demanding_mountain_hiking">Escursionistico impegnativo</string>
+    <string name="nearby_trails_difficulty_alpine_hiking">Alpinistico</string>
+    <string name="nearby_trails_difficulty_demanding_alpine_hiking">Alpinistico impegnativo</string>
+    <string name="nearby_trails_difficulty_difficult_alpine_hiking">Alpinistico difficile</string>
+    <string name="nearby_trails_estimated_time_note">Stima a velocità media costante, senza tener conto del dislivello (dato non disponibile su questi tracciati).</string>
 </resources>

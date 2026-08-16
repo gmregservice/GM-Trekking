@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Warning
@@ -44,8 +45,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.gmtrekking.app.R
 import com.gmtrekking.app.data.gpx.CurrentTrackHolder
 import com.gmtrekking.app.data.gpx.GpxParser
@@ -74,6 +78,7 @@ fun MainMapScreen(
     onPlacesNearbyClick: () -> Unit,
     onHistoryClick: () -> Unit,
     onEmergencyClick: () -> Unit,
+    onNearbyTrailsClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val loadedTrack by CurrentTrackHolder.track.collectAsState()
@@ -91,6 +96,28 @@ fun MainMapScreen(
     // contapassi non appena concesso (vedi DisposableEffect più sotto).
     var hasActivityRecognition by remember {
         mutableStateOf(LocationPermissions.hasActivityRecognitionPermission(context))
+    }
+
+    // Ricentraggio automatico quando l'app torna in primo piano, tipicamente
+    // sbloccando lo schermo (richiesto esplicitamente, agosto 2026): mentre lo
+    // schermo è spento la mappa non viene ridisegnata, quindi al risveglio
+    // sembra "ferma" sull'ultima posizione visibile anche se il puntino si è
+    // nel frattempo spostato fuori dall'inquadratura — prima serviva un tap
+    // manuale sul pulsante "Ricentra" per accorgersene. ON_RESUME (non
+    // ON_START) è l'evento giusto: su Android, spegnere lo schermo con l'app
+    // già in primo piano genera ON_PAUSE, e riaccenderlo/sbloccarlo genera di
+    // nuovo ON_RESUME, anche senza che l'app sia mai passata in background.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                recenterRequest++
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     val gpxPicker = rememberLauncherForActivityResult(
@@ -121,16 +148,30 @@ fun MainMapScreen(
     // La posizione corrente serve fin dall'apertura dell'app (per mostrarla
     // sulla mappa), non solo quando è caricato un percorso: il servizio di
     // localizzazione parte appena il permesso è concesso, indipendentemente
-    // dalla presenza di un tracciato. Il permesso per il contapassi viene
-    // richiesto nello stesso momento, per non aggiungere un secondo passaggio
-    // separato solo per una funzionalità accessoria.
+    // dalla presenza di un tracciato.
+    //
+    // BUG REALE CORRETTO (agosto 2026): il permesso per il contapassi veniva
+    // richiesto SOLO dentro il ramo "else" (posizione non ancora concessa),
+    // quindi chi aveva già dato il permesso di posizione PRIMA che questa
+    // funzione esistesse (v1.12) non lo vedeva mai richiesto — il contapassi
+    // restava sempre "non disponibile" senza che l'utente potesse saperne il
+    // motivo. Corretto controllando/richiedendo i due permessi in modo
+    // indipendente: la posizione avvia comunque subito il servizio se già
+    // concessa, il contapassi viene richiesto a parte ogni volta che manca,
+    // a prescindere dallo stato del permesso di posizione.
     LaunchedEffect(Unit) {
         if (LocationPermissions.hasForegroundLocationPermission(context)) {
             startTrackingService(context)
-        } else {
-            val toRequest = LocationPermissions.foregroundLocationPermissions() +
-                listOfNotNull(LocationPermissions.activityRecognitionPermissionIfNeeded())
-            permissionLauncher.launch(toRequest)
+        }
+        val toRequest = mutableListOf<String>()
+        if (!LocationPermissions.hasForegroundLocationPermission(context)) {
+            toRequest += LocationPermissions.foregroundLocationPermissions()
+        }
+        if (!hasActivityRecognition) {
+            LocationPermissions.activityRecognitionPermissionIfNeeded()?.let { toRequest += it }
+        }
+        if (toRequest.isNotEmpty()) {
+            permissionLauncher.launch(toRequest.toTypedArray())
         }
     }
 
@@ -167,6 +208,9 @@ fun MainMapScreen(
                     }
                     IconButton(onClick = onPlacesNearbyClick) {
                         Icon(Icons.Filled.Place, contentDescription = stringResource(R.string.home_places_nearby))
+                    }
+                    IconButton(onClick = onNearbyTrailsClick) {
+                        Icon(Icons.Filled.Map, contentDescription = stringResource(R.string.home_nearby_trails))
                     }
                     IconButton(onClick = onEmergencyClick) {
                         Icon(Icons.Filled.Warning, contentDescription = stringResource(R.string.home_emergency))
