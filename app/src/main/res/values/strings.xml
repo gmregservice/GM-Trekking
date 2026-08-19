@@ -74,8 +74,8 @@
     <string name="settings_navigation_api_key_remove">Rimuovi chiave</string>
     <string name="settings_navigation_api_key_status_configured">Chiave configurata.</string>
     <string name="settings_navigation_api_key_status_missing">Nessuna chiave configurata.</string>
-    <string name="settings_navigation_not_active_note">Funzione non ancora attiva: per ora questa pagina permette solo di salvare la chiave in anticipo; l\'instradamento reale sulla mappa arriverà in un aggiornamento successivo.</string>
-    <string name="settings_navigation_privacy_note">Nota sulla privacy: quando questa funzione sarà attiva, ad ogni richiesta di instradamento la tua posizione e la destinazione scelta verranno inviate a OpenRouteService (servizio di terze parti, non gestito da noi) per calcolare il percorso — solo quando avvii una navigazione, non in continuo.</string>
+    <string name="settings_navigation_active_note">Con una chiave salvata, navigando verso un luogo utile la mappa mostra il percorso reale su sentieri e strade, non più una semplice linea retta. Se manca la chiave, o il calcolo del percorso non riesce (es. limite giornaliero raggiunto), la navigazione continua comunque con la linea retta.</string>
+    <string name="settings_navigation_privacy_note">Nota sulla privacy: ad ogni richiesta di instradamento (solo quando avvii la navigazione verso un luogo, non in continuo) la tua posizione e la destinazione scelta vengono inviate a OpenRouteService (servizio di terze parti, non gestito da noi) per calcolare il percorso.</string>
 
     <!-- Bussola sovrapposta alla mappa, in navigazione -->
     <string name="compass_toggle">Bussola: tocca per nascondere o mostrare</string>

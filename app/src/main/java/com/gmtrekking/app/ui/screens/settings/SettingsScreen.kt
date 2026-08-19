@@ -240,7 +240,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(top = 4.dp),
             )
             Text(
-                text = stringResource(R.string.settings_navigation_not_active_note),
+                text = stringResource(R.string.settings_navigation_active_note),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 16.dp),
             )

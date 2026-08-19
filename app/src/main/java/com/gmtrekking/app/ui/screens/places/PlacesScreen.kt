@@ -54,6 +54,7 @@ import com.gmtrekking.app.data.gpx.CurrentTrackHolder
 import com.gmtrekking.app.data.navigation.NavigationEngine
 import com.gmtrekking.app.data.navigation.PoiNavigationHolder
 import com.gmtrekking.app.data.poi.Poi
+import com.gmtrekking.app.data.settings.AppSettingsStorage
 import com.gmtrekking.app.location.LocationPermissions
 import com.gmtrekking.app.ui.screens.trailnavigation.formatTrackingDistance
 import androidx.compose.material.icons.Icons
@@ -106,7 +107,20 @@ fun PlacesScreen(
     }
 
     fun startNavigation(poi: Poi) {
-        PoiNavigationHolder.target.value = PoiNavigationHolder.Target(poi.name, poi.latitude, poi.longitude)
+        // La chiave API (Impostazioni > Navigazione) e la posizione di
+        // partenza servono solo per provare a calcolare un percorso reale in
+        // background (vedi PoiNavigationHolder.start): se manca l'una o
+        // l'altra, la navigazione parte comunque, con la linea retta di
+        // riserva già esistente prima di questa funzione.
+        val start = currentLocation
+        PoiNavigationHolder.start(
+            name = poi.name,
+            latitude = poi.latitude,
+            longitude = poi.longitude,
+            startLat = start?.latitude,
+            startLon = start?.longitude,
+            apiKey = AppSettingsStorage.getOrsApiKey(context),
+        )
         onBack()
     }
 

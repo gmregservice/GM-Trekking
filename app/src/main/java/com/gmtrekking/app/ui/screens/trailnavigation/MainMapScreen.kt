@@ -242,27 +242,64 @@ fun MainMapScreen(
 
         // Percorso usato per calcolare la navigazione mostrata in questa
         // schermata: quello verso un luogo utile ha la priorità (punto 6 del
-        // piano), altrimenti quello GPX caricato come guida. Il primo punto è
-        // sempre la posizione corrente stessa (aggiornata ad ogni fix GPS): il
-        // punto più vicino del "percorso" è quindi sempre quello, la distanza
-        // dal tracciato resta sempre 0 e l'avviso "fuori percorso" (pensato
-        // per un vero tracciato da seguire) non scatta mai per questa modalità
-        // — un effetto collaterale voluto della scelta di riusare
-        // NavigationEngine invece di scriverne uno dedicato per questo caso.
+        // piano), altrimenti quello GPX caricato come guida.
+        //
+        // Verso un luogo utile ci sono due casi, a seconda che
+        // PoiNavigationHolder sia riuscito a calcolare un percorso reale su
+        // sentieri/strade (routePoints, tramite OpenRouteService — vedi
+        // "Instradamento reale" in docs/PIANO_SVILUPPO.md):
+        //  - **Percorso reale disponibile**: usato così com'è, fisso da
+        //    quando è stato calcolato. Il punto più vicino/la direzione
+        //    seguono la posizione corrente lungo QUESTO percorso, esattamente
+        //    come per un tracciato GPX caricato.
+        //  - **Nessun percorso reale** (chiave non configurata in
+        //    Impostazioni, richiesta non ancora arrivata, o fallita): resta
+        //    il comportamento precedente, una linea retta di due soli punti
+        //    (posizione corrente + destinazione), ricostruita ad ogni fix GPS
+        //    — per questo il punto più vicino del "percorso" è sempre quello
+        //    di partenza (distanza 0) e l'avviso "fuori percorso" non scatta
+        //    mai in questo caso, effetto collaterale voluto.
         val navigationTrack = remember(poiTarget, loadedTrack, location.latitude, location.longitude) {
             poiTarget?.let { target ->
-                GpxTrack(
-                    name = target.name,
-                    points = listOf(
-                        TrackPoint(location.latitude, location.longitude),
-                        TrackPoint(target.latitude, target.longitude),
-                    ),
-                )
+                val realRoute = target.routePoints
+                if (realRoute != null && realRoute.size >= 2) {
+                    GpxTrack(name = target.name, points = realRoute)
+                } else {
+                    GpxTrack(
+                        name = target.name,
+                        points = listOf(
+                            TrackPoint(location.latitude, location.longitude),
+                            TrackPoint(target.latitude, target.longitude),
+                        ),
+                    )
+                }
             } ?: loadedTrack
         }
         val engine = remember(navigationTrack) { navigationTrack?.let { NavigationEngine(it) } }
         val navState = remember(engine, location.latitude, location.longitude) {
             engine?.update(location.latitude, location.longitude)
+        }
+
+        // Traccia disegnata come linea sulla mappa (TrekMapView, sotto): il
+        // percorso GPX caricato ha sempre la priorità; altrimenti, SOLO se
+        // disponibile un percorso reale verso un luogo utile (mai la linea
+        // retta di riserva sopra, che "salterebbe" continuamente perché il
+        // suo primo punto è sempre la posizione corrente — vedi commento
+        // originale più sotto su TrekMapView).
+        // remember(loadedTrack, poiTarget), non location: a differenza della
+        // linea retta di riserva, il percorso reale non dipende dalla
+        // posizione corrente (resta fisso da quando è stato calcolato), quindi
+        // non c'è motivo di ricostruire l'oggetto ad ogni fix GPS.
+        val mapTrack = remember(loadedTrack, poiTarget) {
+            loadedTrack ?: run {
+                val target = poiTarget
+                val realRoute = target?.routePoints
+                if (target != null && realRoute != null && realRoute.size >= 2) {
+                    GpxTrack(name = target.name, points = realRoute)
+                } else {
+                    null
+                }
+            }
         }
 
         // Orientamento del telefono (bussola), usato per mostrare la freccia
@@ -325,13 +362,14 @@ fun MainMapScreen(
             // spazio verticale disponibile.
             Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 TrekMapView(
-                    // Il layer del tracciato/il "fit" automatico della camera restano
-                    // legati solo al vero percorso GPX caricato (loadedTrack), MAI al
-                    // percorso sintetico verso un luogo utile: quest'ultimo cambia ad
-                    // ogni fix GPS (il primo punto è sempre la posizione corrente), e
-                    // ri-inquadrare la camera ad ogni aggiornamento sarebbe un fastidioso
-                    // "salto" continuo della mappa durante la navigazione verso un luogo.
-                    track = loadedTrack,
+                    // Il layer del tracciato/il "fit" automatico della camera seguono
+                    // loadedTrack (percorso GPX caricato) o, in sua assenza, il percorso
+                    // REALE verso un luogo utile quando disponibile (mapTrack, sopra) —
+                    // MAI la linea retta di riserva: quest'ultima cambia ad ogni fix GPS
+                    // (il primo punto è sempre la posizione corrente), e disegnarla
+                    // ri-inquadrerebbe la camera ad ogni aggiornamento, un fastidioso
+                    // "salto" continuo della mappa.
+                    track = mapTrack,
                     currentLat = location.latitude,
                     currentLon = location.longitude,
                     autoZoomIn = navState?.shouldZoomIn ?: false,
