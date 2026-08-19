@@ -47,6 +47,7 @@ import com.gmtrekking.app.data.gpx.CurrentTrackHolder
 import com.gmtrekking.app.data.gpx.GpxWriter
 import com.gmtrekking.app.data.trails.NearbyTrail
 import com.gmtrekking.app.data.trails.TrailDifficulty
+import com.gmtrekking.app.data.trails.displayName
 import com.gmtrekking.app.data.trails.estimatedMinutes
 import com.gmtrekking.app.data.trails.toGpxTrack
 import com.gmtrekking.app.location.LocationPermissions
@@ -216,7 +217,7 @@ private fun TrailListItem(
 ) {
     Card(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(trail.name, style = MaterialTheme.typography.titleLarge)
+            Text(trail.displayName(), style = MaterialTheme.typography.titleLarge)
             Text(
                 text = stringResource(R.string.nearby_trails_distance_from_you, formatTrackingDistance(trail.distanceFromUserMeters)),
                 style = MaterialTheme.typography.bodyMedium,

@@ -431,12 +431,33 @@ fun MainMapScreen(
                     }
                 }
 
-                poiTarget?.let { target ->
+                // Titolo con il nome di cosa si sta seguendo: prima compariva
+                // solo navigando verso un luogo utile, mai per un percorso GPX
+                // caricato o un sentiero da "Sentieri vicini" — segnalato
+                // esplicitamente come mancante (agosto 2026): senza sapere il
+                // nome/numero del sentiero la navigazione risultava poco
+                // utile in pratica.
+                //
+                // Val locale invece di "if (poiTarget != null)": poiTarget
+                // viene da "by collectAsState()" (un getter, non un semplice
+                // val), quindi lo smart cast su poiTarget.name da un if non è
+                // ammesso dal compilatore — copiarlo in un val locale lo rende
+                // di nuovo possibile.
+                val currentPoiTarget = poiTarget
+                if (currentPoiTarget != null) {
                     Text(
-                        text = stringResource(R.string.poi_nav_title, target.name),
+                        text = stringResource(R.string.poi_nav_title, currentPoiTarget.name),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
                     )
+                } else {
+                    loadedTrack?.let { track ->
+                        Text(
+                            text = stringResource(R.string.nav_track_title, track.name),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+                        )
+                    }
                 }
 
                 // Blocco compatto, non più a piena altezza: la freccia ora è

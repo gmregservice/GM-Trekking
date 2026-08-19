@@ -68,6 +68,7 @@ class TrailRepository(
         return NearbyTrail(
             id = id,
             name = name,
+            ref = tags["ref"],
             points = points,
             lengthMeters = totalDistance(points),
             distanceFromUserMeters = distanceFromUser,

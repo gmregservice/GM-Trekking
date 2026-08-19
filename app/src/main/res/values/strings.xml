@@ -62,12 +62,17 @@
 
     <!-- Bussola sovrapposta alla mappa, in navigazione -->
     <string name="compass_toggle">Bussola: tocca per nascondere o mostrare</string>
+    <string name="compass_north">N</string>
+    <string name="compass_east">E</string>
+    <string name="compass_south">S</string>
+    <string name="compass_west">O</string>
 
     <!-- Navigazione (mostrata solo quando è caricato un percorso) -->
     <string name="nav_off_route_title">Sei fuori dal percorso</string>
     <string name="nav_off_route_instruction">Torna verso il tracciato: segui la freccia</string>
     <string name="nav_distance_to_next_meters">%1$d m</string>
     <string name="nav_distance_remaining">Mancano %1$s al termine del percorso</string>
+    <string name="nav_track_title">Stai seguendo: %1$s</string>
     <string name="nav_tracking_notification_text">GM-Trekking sta seguendo la tua posizione</string>
 
     <!-- Luoghi utili: categorie (etichette semplici, non gergo tecnico) -->

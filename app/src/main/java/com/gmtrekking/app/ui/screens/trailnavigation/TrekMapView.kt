@@ -111,13 +111,6 @@ fun TrekMapView(
                 onResume()
                 getMapAsync { maplibreMap ->
                     maplibreMap.setStyle(Style.Builder().fromUri(MAP_STYLE_URL)) { style ->
-                        if (showCurrentPosition) {
-                            if (navigationBearingDegrees != null) {
-                                addNavigationArrowLayer(style, currentLat, currentLon, navigationBearingDegrees)
-                            } else {
-                                addPositionLayer(style, currentLat, currentLon)
-                            }
-                        }
                         if (track != null) {
                             addTrackLayer(style, track)
                             fitCameraToTrack(maplibreMap, track)
@@ -136,9 +129,22 @@ fun TrekMapView(
                                 )
                             )
                         }
+                        if (showCurrentPosition) {
+                            // Aggiunta DOPO il tracciato apposta: i layer più
+                            // recenti si disegnano sopra ai precedenti, quindi la
+                            // freccia/il cerchio di posizione restano sempre ben
+                            // visibili anche nei punti in cui il percorso ci
+                            // passa esattamente sotto — prima erano sotto alla
+                            // linea e potevano risultare parzialmente coperti.
+                            if (navigationBearingDegrees != null) {
+                                addNavigationArrowLayer(style, currentLat, currentLon, navigationBearingDegrees)
+                            } else {
+                                addPositionLayer(style, currentLat, currentLon)
+                            }
+                        }
                         if (waypoints.isNotEmpty()) {
-                            // Aggiunta per ultima: disegnata sopra alla linea del
-                            // tracciato, altrimenti i pallini rischierebbero di
+                            // Aggiunta per ultima: disegnata sopra a tutto il
+                            // resto, altrimenti i pallini rischierebbero di
                             // restare nascosti nei punti in cui la linea ci passa sopra.
                             addWaypointsLayer(style, waypoints)
                         }
@@ -149,10 +155,15 @@ fun TrekMapView(
         update = { view ->
             view.getMapAsync { maplibreMap ->
                 val style = maplibreMap.style ?: return@getMapAsync
+                // Stesso ordine della creazione iniziale (vedi factory sopra):
+                // tracciato, poi posizione/freccia, poi waypoint — così, anche
+                // se un layer viene tolto e riaggiunto qui (es. un GPX caricato
+                // dopo l'apertura della schermata), la freccia resta comunque
+                // sopra alla linea del percorso, non sotto.
+                syncTrackLayer(style, track)
                 if (showCurrentPosition) {
                     syncPositionAndArrowLayers(style, currentLat, currentLon, navigationBearingDegrees)
                 }
-                syncTrackLayer(style, track)
                 syncWaypointsLayer(style, waypoints)
 
                 if (track != null && track != lastFittedTrack.value) {

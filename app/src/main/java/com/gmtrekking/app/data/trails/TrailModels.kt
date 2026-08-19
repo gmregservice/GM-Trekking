@@ -13,6 +13,14 @@ import kotlin.math.roundToInt
 data class NearbyTrail(
     val id: Long,
     val name: String,
+    /**
+     * Numero ufficiale del sentiero (tag OSM `ref`, es. numerazione CAI tipo
+     * "126") quando presente — spesso il codice breve usato sulla
+     * segnaletica reale sul terreno, distinto dal nome descrittivo. null se
+     * il tag manca: copertura non uniforme su OpenStreetMap, stesso limite
+     * già noto per `sac_scale` (vedi piano) — mai un valore inventato.
+     */
+    val ref: String?,
     val points: List<TrackPoint>,
     /** Lunghezza totale del sentiero, calcolata sommando i segmenti della geometria. */
     val lengthMeters: Double,
@@ -21,6 +29,14 @@ data class NearbyTrail(
     /** null se il sentiero non ha il tag `sac_scale` su OpenStreetMap — copertura non uniforme, vedi piano. */
     val difficulty: TrailDifficulty?,
 )
+
+/**
+ * Nome mostrato all'utente: "numero · nome" quando il tag `ref` è
+ * disponibile (es. "126 · Sentiero dei Contrabbandieri"), altrimenti solo il
+ * nome — richiesto esplicitamente (agosto 2026), per poter riconoscere un
+ * sentiero dal numero riportato sulla segnaletica reale, non solo dal nome.
+ */
+fun NearbyTrail.displayName(): String = ref?.let { "$it · $name" } ?: name
 
 /** Corrisponde ai valori del tag OSM `sac_scale` (Swiss Alpine Club hiking scale), dal più facile al più impegnativo. */
 enum class TrailDifficulty {
@@ -32,7 +48,7 @@ enum class TrailDifficulty {
     DIFFICULT_ALPINE_HIKING,
 }
 
-fun NearbyTrail.toGpxTrack(): GpxTrack = GpxTrack(name = name, points = points)
+fun NearbyTrail.toGpxTrack(): GpxTrack = GpxTrack(name = displayName(), points = points)
 
 // Velocità media di cammino usata per stimare il tempo di percorrenza. I dati
 // Overpass di questa query non includono l'altitudine (solo lat/lon), quindi
