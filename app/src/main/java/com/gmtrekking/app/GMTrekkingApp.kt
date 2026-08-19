@@ -23,6 +23,13 @@ import org.maplibre.android.MapLibre
  * framework di dependency injection, se il progetto crescerà abbastanza da
  * giustificarlo).
  */
+// Build diagnostico (agosto 2026): commit senza alcuna modifica funzionale,
+// solo per generare una nuova run di GitHub Actions e verificare se un APK
+// rigenerato da zero risolve un problema di installazione ("Annullamento"
+// immediato all'apertura del file) riscontrato sui build precedenti, sia da
+// 69 MB che da 37 MB — nessun cambio di manifest, permessi o dipendenze
+// nel frattempo, quindi questo test isola se il problema è nel contenuto
+// del codice o nel processo di build/packaging stesso.
 class GMTrekkingApp : Application() {
     override fun onCreate() {
         super.onCreate()
