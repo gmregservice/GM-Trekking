@@ -20,8 +20,8 @@ android {
         // release (usato da Android per capire se una APK è più recente di un'altra).
         // versionName: numero visibile all'utente (vedi anche BuildConfig.VERSION_NAME,
         // da mostrare nell'app — pianificato, non ancora implementato in UI).
-        versionCode = 17
-        versionName = "1.17"
+        versionCode = 18
+        versionName = "1.18"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }

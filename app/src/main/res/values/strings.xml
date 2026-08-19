@@ -60,6 +60,9 @@
     <!-- Azioni generiche condivise fra più schermate -->
     <string name="action_retry">Riprova</string>
 
+    <!-- Bussola sovrapposta alla mappa, in navigazione -->
+    <string name="compass_toggle">Bussola: tocca per nascondere o mostrare</string>
+
     <!-- Navigazione (mostrata solo quando è caricato un percorso) -->
     <string name="nav_off_route_title">Sei fuori dal percorso</string>
     <string name="nav_off_route_instruction">Torna verso il tracciato: segui la freccia</string>

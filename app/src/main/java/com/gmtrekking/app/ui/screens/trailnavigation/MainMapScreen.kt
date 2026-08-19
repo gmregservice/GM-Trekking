@@ -260,6 +260,20 @@ fun MainMapScreen(
             engine?.update(location.latitude, location.longitude)
         }
 
+        // Orientamento del telefono (bussola), usato per mostrare la freccia
+        // rispetto al senso di marcia invece che rispetto al nord fisso —
+        // segnalato esplicitamente come confuso (agosto 2026: la freccia
+        // indicava una direzione mentre la destinazione reale era
+        // dall'altra parte). Se il sensore manca sul dispositivo,
+        // deviceHeadingDegrees resta null e si torna al comportamento
+        // precedente (rotazione rispetto al nord) — vedi DeviceHeading.kt.
+        val deviceHeadingDegrees = rememberDeviceHeadingDegrees()
+        val arrowBearingDegrees = remember(navState?.bearingToNextPointDegrees, deviceHeadingDegrees) {
+            val bearing = navState?.bearingToNextPointDegrees ?: return@remember null
+            val heading = deviceHeadingDegrees
+            if (heading != null) ((bearing - heading) + 360.0) % 360.0 else bearing
+        }
+
         // Registrazione del cammino effettuato: indipendente dal percorso GPX
         // caricato come guida (funziona anche senza — vedi TrackingControls).
         // Ogni nuovo fix GPS viene inoltrato a TrekRecorder, che internamente
@@ -296,13 +310,15 @@ fun MainMapScreen(
 
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
 
-            Box(
-                modifier = if (navigationTrack == null) {
-                    Modifier.fillMaxWidth().weight(1f)
-                } else {
-                    Modifier.fillMaxWidth().height(280.dp)
-                }
-            ) {
+            // Sempre weight(1f), navigazione attiva o no: prima, con un percorso
+            // caricato, la mappa aveva un'altezza fissa (280dp) e il pannello
+            // sotto (freccia + distanze) occupava tutto lo spazio restante,
+            // lasciando la mappa poco più di metà schermo — segnalato
+            // esplicitamente come poco visibile (agosto 2026). Ora che la
+            // freccia è disegnata sulla mappa stessa (vedi TrekMapView.kt) e il
+            // pannello sotto è compatto, la mappa può sempre prendere tutto lo
+            // spazio verticale disponibile.
+            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 TrekMapView(
                     // Il layer del tracciato/il "fit" automatico della camera restano
                     // legati solo al vero percorso GPX caricato (loadedTrack), MAI al
@@ -316,6 +332,7 @@ fun MainMapScreen(
                     autoZoomIn = navState?.shouldZoomIn ?: false,
                     recenterRequest = recenterRequest,
                     waypoints = poiTarget?.let { listOf(it.latitude to it.longitude) } ?: emptyList(),
+                    navigationBearingDegrees = arrowBearingDegrees,
                 )
 
                 // "Ricentra": scorrendo la mappa per vedere cosa c'è più avanti
@@ -328,6 +345,19 @@ fun MainMapScreen(
                         .padding(16.dp),
                 ) {
                     Icon(Icons.Filled.MyLocation, contentDescription = stringResource(R.string.map_recenter))
+                }
+
+                // Bussola sovrapposta alla mappa (richiesta esplicitamente,
+                // agosto 2026): angolo opposto al pulsante "Ricentra" per non
+                // sovrapporsi. Mostrata solo se il sensore è disponibile — vedi
+                // DeviceHeading.kt.
+                deviceHeadingDegrees?.let { heading ->
+                    CompassOverlay(
+                        headingDegrees = heading,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp),
+                    )
                 }
             }
 
@@ -409,27 +439,24 @@ fun MainMapScreen(
                     )
                 }
 
+                // Blocco compatto, non più a piena altezza: la freccia ora è
+                // disegnata direttamente sulla mappa (vedi TrekMapView.kt),
+                // apposta per lasciarle più spazio, segnalato come poco
+                // visibile in precedenza (agosto 2026).
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
-                        .padding(24.dp),
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
                 ) {
-                    DirectionArrow(
-                        bearingDegrees = navState.bearingToNextPointDegrees,
-                        isOffRoute = navState.isOffRoute,
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = stringResource(
                             R.string.nav_distance_to_next_meters,
                             navState.distanceToNextPointMeters.roundToInt(),
                         ),
-                        style = MaterialTheme.typography.headlineLarge,
+                        style = MaterialTheme.typography.headlineMedium,
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = if (poiTarget != null) {
                             stringResource(R.string.poi_nav_distance_remaining, formatDistance(navState.distanceRemainingMeters))
