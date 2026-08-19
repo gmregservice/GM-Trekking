@@ -85,6 +85,7 @@ fun TrekMapView(
     showCurrentPosition: Boolean = true,
     waypoints: List<Pair<Double, Double>> = emptyList(),
     navigationBearingDegrees: Double? = null,
+    focusOnPoi: Pair<Double, Double>? = null,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapViewRef = remember { mutableStateOf<MapView?>(null) }
@@ -92,6 +93,15 @@ fun TrekMapView(
     // camera, per non "saltare" ad ogni ricomposizione ma solo quando il
     // tracciato cambia davvero (es. l'utente carica un nuovo GPX).
     val lastFittedTrack = remember { mutableStateOf<GpxTrack?>(null) }
+    // Stessa idea di lastFittedTrack, ma per [focusOnPoi]: l'ultima
+    // destinazione per cui abbiamo già inquadrato posizione+destinazione,
+    // così l'inquadratura avviene una volta sola quando si avvia la
+    // navigazione verso un luogo (o si cambia luogo), non ad ogni fix GPS —
+    // segnalato su dispositivo reale (agosto 2026): senza un percorso reale
+    // disegnato come linea, la camera non si spostava mai per includere la
+    // destinazione, che poteva restare fuori dall'inquadratura dando
+    // l'impressione che la navigazione non avesse fatto nulla.
+    val lastFittedPoi = remember { mutableStateOf<Pair<Double, Double>?>(null) }
     // Ultimo valore di recenterRequest già gestito: un semplice contatore che
     // il chiamante incrementa ad ogni tap sul pulsante "Ricentra". Confrontarlo
     // con l'ultimo valore visto è il modo standard in Compose per reagire a un
@@ -115,6 +125,14 @@ fun TrekMapView(
                             addTrackLayer(style, track)
                             fitCameraToTrack(maplibreMap, track)
                             lastFittedTrack.value = track
+                        } else if (focusOnPoi != null) {
+                            // Nessuna linea da disegnare (nessun percorso reale
+                            // ancora disponibile), ma c'è comunque una
+                            // destinazione da raggiungere: inquadra posizione
+                            // corrente + destinazione, altrimenti il marker
+                            // potrebbe restare fuori schermo.
+                            fitCameraToPoints(maplibreMap, listOf(LatLng(currentLat, currentLon), LatLng(focusOnPoi.first, focusOnPoi.second)))
+                            lastFittedPoi.value = focusOnPoi
                         } else {
                             // Nessun percorso ancora caricato: centra semplicemente
                             // sulla posizione corrente, con uno zoom da "sto guardando
@@ -171,8 +189,20 @@ fun TrekMapView(
                     // ricaricato): inquadra il nuovo percorso per intero.
                     fitCameraToTrack(maplibreMap, track)
                     lastFittedTrack.value = track
+                    lastFittedPoi.value = null
                 } else if (track == null) {
                     lastFittedTrack.value = null
+                    if (focusOnPoi != null && focusOnPoi != lastFittedPoi.value) {
+                        // Nuova destinazione senza percorso reale (o percorso
+                        // reale non ancora arrivato): inquadra posizione +
+                        // destinazione una volta sola, non ad ogni fix GPS
+                        // (che farebbe "saltare" continuamente la camera, dato
+                        // che currentLat/currentLon cambiano di continuo).
+                        fitCameraToPoints(maplibreMap, listOf(LatLng(currentLat, currentLon), LatLng(focusOnPoi.first, focusOnPoi.second)))
+                        lastFittedPoi.value = focusOnPoi
+                    } else if (focusOnPoi == null) {
+                        lastFittedPoi.value = null
+                    }
                 }
 
                 if (autoZoomIn) {
@@ -447,6 +477,20 @@ private fun createArrowBitmap(): Bitmap {
 private fun fitCameraToTrack(map: MapLibreMap, track: GpxTrack) {
     val boundsBuilder = LatLngBounds.Builder()
     track.points.forEach { boundsBuilder.include(LatLng(it.latitude, it.longitude)) }
+    runCatching {
+        map.moveCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 80))
+    }
+}
+
+/**
+ * Come [fitCameraToTrack], ma per un insieme di punti qualunque invece che
+ * per un [GpxTrack] — usata per inquadrare posizione corrente + destinazione
+ * quando si naviga verso un luogo utile senza (ancora) un percorso reale da
+ * disegnare come linea (vedi [focusOnPoi] sopra).
+ */
+private fun fitCameraToPoints(map: MapLibreMap, points: List<LatLng>) {
+    val boundsBuilder = LatLngBounds.Builder()
+    points.forEach { boundsBuilder.include(it) }
     runCatching {
         map.moveCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 80))
     }
