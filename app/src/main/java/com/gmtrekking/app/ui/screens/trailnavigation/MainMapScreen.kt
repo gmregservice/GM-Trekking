@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -79,6 +80,7 @@ fun MainMapScreen(
     onHistoryClick: () -> Unit,
     onEmergencyClick: () -> Unit,
     onNearbyTrailsClick: () -> Unit,
+    onSettingsClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val loadedTrack by CurrentTrackHolder.track.collectAsState()
@@ -214,6 +216,9 @@ fun MainMapScreen(
                     }
                     IconButton(onClick = onEmergencyClick) {
                         Icon(Icons.Filled.Warning, contentDescription = stringResource(R.string.home_emergency))
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.home_settings))
                     }
                 },
             )

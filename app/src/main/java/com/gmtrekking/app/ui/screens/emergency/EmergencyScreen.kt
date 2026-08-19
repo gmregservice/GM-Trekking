@@ -110,7 +110,7 @@ fun EmergencyScreen(onBack: () -> Unit, onSettingsClick: () -> Unit) {
                 },
                 actions = {
                     IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.emergency_settings_title))
+                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings_title))
                     }
                 },
             )

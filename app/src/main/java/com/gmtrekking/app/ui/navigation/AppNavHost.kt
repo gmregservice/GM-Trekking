@@ -8,10 +8,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.gmtrekking.app.ui.screens.emergency.EmergencyScreen
-import com.gmtrekking.app.ui.screens.emergency.EmergencySettingsScreen
 import com.gmtrekking.app.ui.screens.history.ActivityDetailScreen
 import com.gmtrekking.app.ui.screens.history.ActivityHistoryScreen
 import com.gmtrekking.app.ui.screens.places.PlacesScreen
+import com.gmtrekking.app.ui.screens.settings.SettingsScreen
 import com.gmtrekking.app.ui.screens.trailnavigation.MainMapScreen
 import com.gmtrekking.app.ui.screens.trails.NearbyTrailsScreen
 
@@ -23,7 +23,12 @@ private object Routes {
     const val HISTORY_DETAIL = "history_detail/{activityId}"
     fun historyDetail(activityId: String) = "history_detail/$activityId"
     const val EMERGENCY = "emergency"
-    const val EMERGENCY_SETTINGS = "emergency_settings"
+    // Prima "impostazioni" apriva solo l'elenco dei contatti d'emergenza,
+    // raggiungibile unicamente da dentro "Emergenza". Ora è una pagina
+    // generale di Impostazioni (vedi SettingsScreen.kt), raggiungibile anche
+    // direttamente dalla mappa principale — nome rotta aggiornato di
+    // conseguenza (nessun dato persistito dipende da questa stringa).
+    const val SETTINGS = "settings"
     const val NEARBY_TRAILS = "nearby_trails"
 }
 
@@ -47,6 +52,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 onHistoryClick = { navController.navigate(Routes.HISTORY) },
                 onEmergencyClick = { navController.navigate(Routes.EMERGENCY) },
                 onNearbyTrailsClick = { navController.navigate(Routes.NEARBY_TRAILS) },
+                onSettingsClick = { navController.navigate(Routes.SETTINGS) },
             )
         }
 
@@ -77,12 +83,12 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         composable(Routes.EMERGENCY) {
             EmergencyScreen(
                 onBack = { navController.popBackStack() },
-                onSettingsClick = { navController.navigate(Routes.EMERGENCY_SETTINGS) },
+                onSettingsClick = { navController.navigate(Routes.SETTINGS) },
             )
         }
 
-        composable(Routes.EMERGENCY_SETTINGS) {
-            EmergencySettingsScreen(onBack = { navController.popBackStack() })
+        composable(Routes.SETTINGS) {
+            SettingsScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.NEARBY_TRAILS) {

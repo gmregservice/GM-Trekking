@@ -60,6 +60,23 @@
     <!-- Azioni generiche condivise fra più schermate -->
     <string name="action_retry">Riprova</string>
 
+    <!-- Impostazioni: pagina generale, contenitore di tutte le opzioni configurabili -->
+    <string name="home_settings">Impostazioni</string>
+    <string name="settings_title">Impostazioni</string>
+    <string name="settings_section_contacts_title">Contatti di emergenza</string>
+    <string name="settings_section_contacts_description">Numeri da avvisare in caso di emergenza: usati dalla schermata \"Emergenza\" per l\'SMS automatico e la scorciatoia WhatsApp.</string>
+    <string name="settings_section_navigation_title">Navigazione</string>
+    <string name="settings_section_navigation_description">In un aggiornamento futuro, questa chiave permetterà di disegnare sulla mappa il percorso reale da seguire (su sentieri e strade, non una semplice linea retta) verso un luogo o un percorso scelto, usando il servizio OpenRouteService.</string>
+    <string name="settings_navigation_why_register">Serve una chiave personale gratuita: registrati con un\'email sul sito di OpenRouteService, poi incolla qui la chiave che ti daranno. È gratuita, ma con un limite di richieste al giorno — superato il limite il servizio si interrompe temporaneamente fino al giorno dopo, non è un errore dell\'app.</string>
+    <string name="settings_navigation_signup_link">Registrati gratuitamente su openrouteservice.org</string>
+    <string name="settings_navigation_api_key_field">Chiave API OpenRouteService</string>
+    <string name="settings_navigation_api_key_save">Salva chiave</string>
+    <string name="settings_navigation_api_key_remove">Rimuovi chiave</string>
+    <string name="settings_navigation_api_key_status_configured">Chiave configurata.</string>
+    <string name="settings_navigation_api_key_status_missing">Nessuna chiave configurata.</string>
+    <string name="settings_navigation_not_active_note">Funzione non ancora attiva: per ora questa pagina permette solo di salvare la chiave in anticipo; l\'instradamento reale sulla mappa arriverà in un aggiornamento successivo.</string>
+    <string name="settings_navigation_privacy_note">Nota sulla privacy: quando questa funzione sarà attiva, ad ogni richiesta di instradamento la tua posizione e la destinazione scelta verranno inviate a OpenRouteService (servizio di terze parti, non gestito da noi) per calcolare il percorso — solo quando avvii una navigazione, non in continuo.</string>
+
     <!-- Bussola sovrapposta alla mappa, in navigazione -->
     <string name="compass_toggle">Bussola: tocca per nascondere o mostrare</string>
     <string name="compass_north">N</string>
@@ -122,7 +139,6 @@
     <string name="emergency_whatsapp_contact">Apri WhatsApp verso questo contatto</string>
 
     <!-- Impostazioni (contenitore generale, per ora solo contatti d'emergenza) -->
-    <string name="emergency_settings_title">Impostazioni</string>
     <string name="emergency_settings_empty">Nessun contatto configurato ancora. Aggiungine uno con il pulsante +.</string>
     <string name="emergency_settings_add">Aggiungi contatto</string>
     <string name="emergency_settings_delete">Elimina contatto</string>
