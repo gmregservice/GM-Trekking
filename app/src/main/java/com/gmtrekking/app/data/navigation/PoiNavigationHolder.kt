@@ -1,7 +1,6 @@
 package com.gmtrekking.app.data.navigation
 
 import com.gmtrekking.app.data.gpx.TrackPoint
-import com.gmtrekking.app.data.routing.RoutingOutcome
 import com.gmtrekking.app.data.routing.RoutingRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,26 +46,7 @@ object PoiNavigationHolder {
         val routePoints: List<TrackPoint>? = null,
     )
 
-    /**
-     * Stato del tentativo di calcolo del percorso reale per la destinazione
-     * corrente — aggiunto (v1.28) dopo una segnalazione su dispositivo reale:
-     * con `routePoints` semplicemente `null` non c'era modo di distinguere
-     * "chiave non configurata" da "richiesta fallita" da "ancora in corso",
-     * quindi nessun modo di capire perché non compariva alcuna indicazione
-     * sulla mappa. `MainMapScreen.kt` lo mostra a schermo (stesso principio
-     * già usato per gli errori di Overpass in `PlacesViewModel.kt`), ma resta
-     * solo informativo: la navigazione con la linea retta di riserva parte e
-     * funziona comunque, a prescindere da questo stato.
-     */
-    sealed class RoutingStatus {
-        object Loading : RoutingStatus()
-        object Success : RoutingStatus()
-        object NoApiKey : RoutingStatus()
-        data class Failure(val detail: String) : RoutingStatus()
-    }
-
     val target = MutableStateFlow<Target?>(null)
-    val routingStatus = MutableStateFlow<RoutingStatus?>(null)
 
     private val routingRepository = RoutingRepository()
 
@@ -98,28 +78,17 @@ object PoiNavigationHolder {
     ) {
         target.value = Target(name, latitude, longitude)
 
-        if (apiKey == null || startLat == null || startLon == null) {
-            routingStatus.value = RoutingStatus.NoApiKey
-            return
-        }
-        routingStatus.value = RoutingStatus.Loading
+        if (apiKey == null || startLat == null || startLon == null) return
         scope.launch {
-            when (val outcome = routingRepository.findHikingRoute(apiKey, startLat, startLon, latitude, longitude)) {
-                is RoutingOutcome.Success -> {
-                    // Solo se l'utente non ha già cambiato/terminato la
-                    // navigazione nel frattempo (es. tornato indietro, scelto
-                    // un altro luogo): evita di "resuscitare" una navigazione
-                    // già chiusa o di sovrascrivere quella di un luogo diverso
-                    // nel frattempo scelto.
-                    val current = target.value
-                    if (current != null && current.latitude == latitude && current.longitude == longitude) {
-                        target.value = current.copy(routePoints = outcome.points)
-                        routingStatus.value = RoutingStatus.Success
-                    }
-                }
-                is RoutingOutcome.Failure -> {
-                    routingStatus.value = RoutingStatus.Failure(outcome.detail)
-                }
+            val route = routingRepository.findHikingRoute(apiKey, startLat, startLon, latitude, longitude)
+            if (route == null) return@launch
+            // Solo se l'utente non ha già cambiato/terminato la navigazione
+            // nel frattempo (es. tornato indietro, scelto un altro luogo):
+            // evita di "resuscitare" una navigazione già chiusa o di
+            // sovrascrivere quella di un luogo diverso nel frattempo scelto.
+            val current = target.value
+            if (current != null && current.latitude == latitude && current.longitude == longitude) {
+                target.value = current.copy(routePoints = route)
             }
         }
     }

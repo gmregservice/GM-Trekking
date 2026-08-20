@@ -88,11 +88,6 @@ fun MainMapScreen(
     // piano): indipendente dal percorso GPX caricato, non lo sovrascrive né lo
     // perde — vedi PoiNavigationHolder.
     val poiTarget by PoiNavigationHolder.target.collectAsState()
-    // Esito del tentativo di calcolo del percorso reale (v1.28): senza questo,
-    // un "nessuna indicazione sulla mappa" era indistinguibile da "chiave
-    // mancante", "richiesta fallita" o "ancora in corso" — vedi
-    // PoiNavigationHolder.RoutingStatus e la nota sotto dove viene mostrato.
-    val routingStatus by PoiNavigationHolder.routingStatus.collectAsState()
     val currentLocation by LocationTrackingService.locationUpdates.collectAsState()
     var gpxError by remember { mutableStateOf<String?>(null) }
     // Contatore incrementato dal pulsante "Ricentra": TrekMapView osserva i
@@ -381,15 +376,6 @@ fun MainMapScreen(
                     recenterRequest = recenterRequest,
                     waypoints = poiTarget?.let { listOf(it.latitude to it.longitude) } ?: emptyList(),
                     navigationBearingDegrees = arrowBearingDegrees,
-                    // Segnalato su dispositivo reale (agosto 2026): navigando
-                    // verso un luogo senza (ancora) un percorso reale, la
-                    // camera non si spostava mai per includere la destinazione,
-                    // che poteva restare fuori dall'inquadratura — nessuna
-                    // indicazione visibile, pur essendo la navigazione
-                    // regolarmente avviata. mapTrack == null vuol dire "nessuna
-                    // linea da disegnare": in quel caso soltanto, TrekMapView
-                    // inquadra posizione + destinazione una volta sola.
-                    focusOnPoi = if (mapTrack == null) poiTarget?.let { it.latitude to it.longitude } else null,
                 )
 
                 // "Ricentra": scorrendo la mappa per vedere cosa c'è più avanti
@@ -507,32 +493,6 @@ fun MainMapScreen(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
                     )
-                    // Stato del percorso reale, solo informativo: in ogni caso
-                    // (in corso, fallito, nessuna chiave) la navigazione con la
-                    // linea retta di riserva parte comunque, questo testo serve
-                    // solo a far capire perché sulla mappa non compare (ancora)
-                    // una linea disegnata — vedi PoiNavigationHolder.RoutingStatus.
-                    when (val status = routingStatus) {
-                        PoiNavigationHolder.RoutingStatus.Loading -> Text(
-                            text = stringResource(R.string.poi_nav_routing_loading),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                        )
-                        PoiNavigationHolder.RoutingStatus.NoApiKey -> Text(
-                            text = stringResource(R.string.poi_nav_routing_no_api_key),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                        )
-                        is PoiNavigationHolder.RoutingStatus.Failure -> Text(
-                            text = stringResource(R.string.poi_nav_routing_failed, status.detail),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                        )
-                        PoiNavigationHolder.RoutingStatus.Success, null -> Unit
-                    }
                 } else {
                     loadedTrack?.let { track ->
                         Text(
