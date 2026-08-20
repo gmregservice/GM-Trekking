@@ -35,7 +35,20 @@ interface RoutingApiService {
     // (RoutingResponse.kt), più semplice da leggere della codifica compatta
     // usata di default dall'endpoint senza questo suffisso (una polyline
     // codificata come stringa, che richiederebbe un decoder dedicato).
-    @Headers("Accept: application/json")
+    //
+    // Accept ampliato e User-Agent esplicito: bug reale riscontrato su
+    // dispositivo (agosto 2026, "Dettaglio tecnico: HTTP 406") — stesso
+    // identico problema già visto e risolto per Overpass API
+    // (OverpassApiService.kt): un `Accept` che dichiara solo
+    // "application/json" non include "application/geo+json" (il content-type
+    // reale restituito dall'endpoint "/geojson"), quindi il server risponde
+    // 406 Not Acceptable. L'header qui sotto replica esattamente l'esempio
+    // ufficiale della documentazione OpenRouteService (curl), che elenca tutti
+    // i formati di risposta supportati dall'API Directions.
+    @Headers(
+        "Accept: application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8",
+        "User-Agent: GMTrekking/1.0 (Android; https://github.com/gmregservice/GM-Trekking)",
+    )
     @POST("v2/directions/{profile}/geojson")
     suspend fun route(
         @Path("profile") profile: String,
