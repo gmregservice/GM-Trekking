@@ -28,6 +28,17 @@
     -->
     <uses-permission android:name="android.permission.SEND_SMS" />
 
+    <!--
+      Backup automatico delle foto del percorso nella galleria pubblica
+      (data/tracking/PhotoBackup.kt), solo Android 9 (API 28) e precedenti:
+      da Android 10 in poi ("scoped storage") non serve alcun permesso per
+      scrivere nuovi file multimediali propri in Pictures/, il sistema
+      ignora questa dichiarazione su quelle versioni.
+    -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
     <uses-feature
         android:name="android.hardware.location.gps"
         android:required="true" />

@@ -59,6 +59,7 @@ import com.gmtrekking.app.data.gpx.GpxTrack
 import com.gmtrekking.app.data.navigation.NavigationEngine
 import com.gmtrekking.app.data.navigation.PoiNavigationHolder
 import com.gmtrekking.app.data.tracking.ActivityStorage
+import com.gmtrekking.app.data.tracking.PhotoBackup
 import com.gmtrekking.app.data.tracking.PhotoStorage
 import com.gmtrekking.app.data.tracking.TrekRecorder
 import com.gmtrekking.app.location.LocationPermissions
@@ -176,6 +177,16 @@ fun MainMapScreen(
         }
         if (!hasActivityRecognition) {
             LocationPermissions.activityRecognitionPermissionIfNeeded()?.let { toRequest += it }
+        }
+        // Backup automatico foto (data/tracking/PhotoBackup.kt): solo su
+        // Android 9 e precedenti, vedi LocationPermissions. Richiesta qui
+        // insieme alle altre invece che al momento del primo "Termina
+        // registrazione" per non far comparire un'altra richiesta di
+        // permesso proprio a fine percorso; se l'utente la nega, il backup
+        // viene semplicemente saltato (mai un blocco, stesso principio già
+        // seguito per l'instradamento reale facoltativo).
+        if (!LocationPermissions.hasLegacyWriteExternalStoragePermission(context)) {
+            LocationPermissions.legacyWriteExternalStoragePermissionIfNeeded()?.let { toRequest += it }
         }
         if (toRequest.isNotEmpty()) {
             permissionLauncher.launch(toRequest.toTypedArray())
@@ -446,6 +457,18 @@ fun MainMapScreen(
                                 formatTrackingDistance(completed.distanceMeters),
                                 formatTrackingDuration(completed.movingTimeMillis),
                                 completed.elevationGainMeters.roundToInt(),
+                            )
+                            // Backup delle foto nella galleria pubblica del
+                            // telefono (richiesto esplicitamente, agosto
+                            // 2026) — dopo il salvataggio, mai prima: un
+                            // fallimento qui (spazio, permesso mancante su
+                            // Android 9 e precedenti) non deve mai rischiare
+                            // di far perdere il percorso appena registrato.
+                            // Vedi data/tracking/PhotoBackup.kt.
+                            PhotoBackup.backupActivityPhotos(
+                                context = context,
+                                activity = completed,
+                                allActivities = ActivityStorage.loadAll(context),
                             )
                         }
                     }

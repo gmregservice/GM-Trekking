@@ -47,4 +47,22 @@ object LocationPermissions {
         activityRecognitionPermissionIfNeeded()?.let {
             ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
         } ?: true
+
+    /**
+     * Permesso per scrivere nella galleria pubblica del telefono (backup
+     * automatico delle foto del percorso, `data/tracking/PhotoBackup.kt`),
+     * necessario solo su Android 9 (API 28) e precedenti: da Android 10 in poi
+     * ("scoped storage") un'app può scrivere nuovi file multimediali propri
+     * nelle raccolte pubbliche (Pictures, ecc.) senza alcun permesso —
+     * dichiarato in AndroidManifest.xml con `maxSdkVersion="28"` per lo
+     * stesso motivo, il sistema lo ignora comunque da Android 10 in su.
+     */
+    fun legacyWriteExternalStoragePermissionIfNeeded(): String? =
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) Manifest.permission.WRITE_EXTERNAL_STORAGE else null
+
+    /** true anche da Android 10 in su, dove questo permesso non serve più. */
+    fun hasLegacyWriteExternalStoragePermission(context: Context): Boolean =
+        legacyWriteExternalStoragePermissionIfNeeded()?.let {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        } ?: true
 }

@@ -75,4 +75,28 @@ object PhotoStorage {
             BitmapFactory.decodeFile(file.absolutePath, decodeOptions)
         }.getOrNull()
     }
+
+    /**
+     * Carica la foto per il visualizzatore a schermo intero (richiesto
+     * esplicitamente, agosto 2026: la miniatura di 256px in Cronologia era
+     * troppo piccola per vedere bene una foto scattata durante il cammino).
+     * Un limite di 2048px di lato (comunque più che sufficiente per riempire
+     * lo schermo di qualunque telefono) invece della risoluzione piena della
+     * fotocamera, che su alcuni dispositivi supera i 10 MB per singola foto —
+     * decodificarla senza alcun limite rischierebbe comunque di esaurire la
+     * memoria disponibile all'app se l'utente apre più foto in sequenza.
+     */
+    fun loadFullScreen(context: Context, fileName: String, reqSize: Int = 2048): Bitmap? =
+        loadThumbnail(context, fileName, reqSize)
+
+    /**
+     * Uri condivisibile (tramite lo stesso FileProvider già configurato per
+     * la fotocamera, vedi [newPhotoTarget]) per il pulsante "Condividi" nel
+     * visualizzatore a schermo intero — null se il file non esiste più.
+     */
+    fun shareableUri(context: Context, fileName: String): Uri? {
+        val file = photoFile(context, fileName)
+        if (!file.exists()) return null
+        return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    }
 }

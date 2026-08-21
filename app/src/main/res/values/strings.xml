@@ -53,6 +53,9 @@
     <string name="history_general_note_save">Salva nota</string>
     <string name="history_waypoints_label">Note e foto sul percorso</string>
     <string name="history_waypoint_photo_description">Foto scattata durante il percorso</string>
+    <string name="history_photo_close">Chiudi</string>
+    <string name="history_photo_share">Condividi</string>
+    <string name="history_photo_load_error">Non riesco a caricare questa foto.</string>
 
     <!-- Navigazione fra schermate -->
     <string name="nav_back_to_map">Torna alla mappa principale</string>

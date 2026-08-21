@@ -1,11 +1,16 @@
 package com.gmtrekking.app.ui.screens.history
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +20,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -37,11 +44,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.gmtrekking.app.R
 import com.gmtrekking.app.data.gpx.GpxTrack
 import com.gmtrekking.app.data.gpx.TrackPoint
@@ -122,15 +132,32 @@ fun ActivityDetailScreen(
                 contentAlignment = Alignment.Center,
             ) { CircularProgressIndicator() }
 
-            else -> ActivityDetailContent(
-                context = context,
-                activity = current,
-                padding = padding,
-                onSaveGeneralNote = { updated ->
-                    activity = updated
-                    coroutineScope.launch { ActivityStorage.update(context, updated) }
-                },
-            )
+            // Visualizzatore a schermo intero: tocco su una miniatura in
+            // WaypointCard — la miniatura in Cronologia (256px) era troppo
+            // piccola per vedere bene una foto scattata durante il cammino,
+            // richiesto esplicitamente (agosto 2026), insieme al pulsante
+            // "Condividi" per esportarla altrove (stesso meccanismo già usato
+            // per l'export GPX/WhatsApp: FileProvider + Intent).
+            else -> {
+                var fullScreenPhotoFileName by remember { mutableStateOf<String?>(null) }
+                ActivityDetailContent(
+                    context = context,
+                    activity = current,
+                    padding = padding,
+                    onSaveGeneralNote = { updated ->
+                        activity = updated
+                        coroutineScope.launch { ActivityStorage.update(context, updated) }
+                    },
+                    onPhotoClick = { fileName -> fullScreenPhotoFileName = fileName },
+                )
+                fullScreenPhotoFileName?.let { fileName ->
+                    FullScreenPhotoDialog(
+                        context = context,
+                        fileName = fileName,
+                        onDismiss = { fullScreenPhotoFileName = null },
+                    )
+                }
+            }
         }
 
         if (showDeleteConfirm) {
@@ -171,6 +198,7 @@ private fun ActivityDetailContent(
     activity: CompletedActivity,
     padding: PaddingValues,
     onSaveGeneralNote: (CompletedActivity) -> Unit,
+    onPhotoClick: (fileName: String) -> Unit,
 ) {
     // CompletedActivity.points (TrackedPoint, con timestamp) va convertito in
     // GpxTrack/TrackPoint (senza timestamp) per riusare lo stesso layer di
@@ -244,7 +272,7 @@ private fun ActivityDetailContent(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             )
             activity.waypoints.forEach { waypoint ->
-                WaypointCard(context = context, waypoint = waypoint)
+                WaypointCard(context = context, waypoint = waypoint, onPhotoClick = onPhotoClick)
             }
         }
 
@@ -253,7 +281,11 @@ private fun ActivityDetailContent(
 }
 
 @Composable
-private fun WaypointCard(context: Context, waypoint: ActivityWaypoint) {
+private fun WaypointCard(
+    context: Context,
+    waypoint: ActivityWaypoint,
+    onPhotoClick: (fileName: String) -> Unit,
+) {
     var thumbnail by remember(waypoint.id) { mutableStateOf<Bitmap?>(null) }
 
     LaunchedEffect(waypoint.id) {
@@ -272,7 +304,13 @@ private fun WaypointCard(context: Context, waypoint: ActivityWaypoint) {
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = stringResource(R.string.history_waypoint_photo_description),
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth().height(180.dp).padding(top = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .padding(top = 8.dp)
+                        .clickable {
+                            waypoint.photoFileName?.let { fileName -> onPhotoClick(fileName) }
+                        },
                 )
             }
 
@@ -285,3 +323,74 @@ private fun WaypointCard(context: Context, waypoint: ActivityWaypoint) {
 
 private fun formatWaypointTime(millis: Long): String =
     SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.ITALY).format(millis)
+
+/**
+ * Visualizzatore a schermo intero per una foto (tocco sulla miniatura in
+ * WaypointCard): Dialog invece di una nuova schermata di navigazione, più
+ * semplice per un contenuto "usa e getta" che non ha bisogno di un proprio
+ * indirizzo/back-stack. Carica la foto in una risoluzione più alta della
+ * miniatura (PhotoStorage.loadFullScreen), non la piena risoluzione della
+ * fotocamera, per lo stesso motivo già spiegato su quella funzione.
+ */
+@Composable
+private fun FullScreenPhotoDialog(
+    context: Context,
+    fileName: String,
+    onDismiss: () -> Unit,
+) {
+    var fullBitmap by remember(fileName) { mutableStateOf<Bitmap?>(null) }
+    var isLoading by remember(fileName) { mutableStateOf(true) }
+
+    LaunchedEffect(fileName) {
+        fullBitmap = withContext(Dispatchers.IO) { PhotoStorage.loadFullScreen(context, fileName) }
+        isLoading = false
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black),
+            contentAlignment = Alignment.Center,
+        ) {
+            when {
+                fullBitmap != null -> Image(
+                    bitmap = fullBitmap!!.asImageBitmap(),
+                    contentDescription = stringResource(R.string.history_waypoint_photo_description),
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                isLoading -> CircularProgressIndicator(color = Color.White)
+                else -> Text(
+                    text = stringResource(R.string.history_photo_load_error),
+                    color = Color.White,
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.history_photo_close), tint = Color.White)
+                }
+                IconButton(
+                    onClick = {
+                        val uri = PhotoStorage.shareableUri(context, fileName) ?: return@IconButton
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "image/jpeg"
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, null))
+                    },
+                ) {
+                    Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.history_photo_share), tint = Color.White)
+                }
+            }
+        }
+    }
+}
