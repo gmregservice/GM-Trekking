@@ -39,6 +39,19 @@ data class SavedTrail(
     val lengthMeters: Double,
     val difficulty: TrailDifficulty?,
     val areaName: String,
+    /**
+     * Toponimo vicino al primo/ultimo punto del sentiero (reverse geocoding
+     * al momento del download, vedi SettingsScreen.kt e ReverseGeocoder.kt),
+     * per riconoscere a colpo d'occhio di che percorso si tratta senza doverlo
+     * caricare — utile in particolare quando [name] è un nome di ripiego
+     * (relazione OSM senza tag `name`). null se il reverse geocoding non è
+     * riuscito (richiede connessione dati) o se il sentiero non ha punti:
+     * arricchimento facoltativo, mai un requisito per il download. Default
+     * null per restare compatibile con i sentieri già salvati prima
+     * dell'introduzione di questi due campi.
+     */
+    val startLocationName: String? = null,
+    val endLocationName: String? = null,
 )
 
 /** Stesso criterio di NearbyTrail.displayName(): "numero · nome" quando il tag `ref` è disponibile. */

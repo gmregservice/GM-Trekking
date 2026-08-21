@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.gmtrekking.app.R
 import com.gmtrekking.app.data.emergency.EmergencyContact
 import com.gmtrekking.app.data.emergency.EmergencyContactsStorage
+import com.gmtrekking.app.data.emergency.ReverseGeocoder
 import com.gmtrekking.app.data.gpx.CurrentTrackHolder
 import com.gmtrekking.app.data.maps.OfflineMapManager
 import com.gmtrekking.app.data.maps.OfflineRegions
@@ -177,7 +178,19 @@ fun SettingsScreen(onBack: () -> Unit) {
             val area = FixedTrailAreas.VAL_DI_MELLO
             try {
                 val trails = TrailRepository().findNearby(area.centerLat, area.centerLon, area.radiusMeters)
-                SavedTrailsStorage.replaceArea(context, area.name, trails.map { it.toSavedTrail(area.name) })
+                // Reverse geocoding di partenza/arrivo qui, una volta sola al download,
+                // invece che ad ogni apertura della pagina: stesso motivo/pattern di
+                // PhotoBackup.subFolderName (vedi ReverseGeocoder.kt) — richiede
+                // connessione dati, fallisce silenziosamente (null) se assente, non è
+                // mai un requisito per il download.
+                val savedTrailsList = trails.map { trail ->
+                    val start = trail.points.firstOrNull()
+                    val end = trail.points.lastOrNull()
+                    val startName = start?.let { ReverseGeocoder.addressFor(context, it.latitude, it.longitude) }
+                    val endName = end?.let { ReverseGeocoder.addressFor(context, it.latitude, it.longitude) }
+                    trail.toSavedTrail(area.name).copy(startLocationName = startName, endLocationName = endName)
+                }
+                SavedTrailsStorage.replaceArea(context, area.name, savedTrailsList)
                 reloadSavedTrails()
             } catch (t: Throwable) {
                 val detail = "${t::class.simpleName}: ${t.message ?: "nessun dettaglio"}"
@@ -530,6 +543,20 @@ private fun SavedTrailListItem(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 2.dp),
             )
+            trail.startLocationName?.let { start ->
+                Text(
+                    text = stringResource(R.string.settings_trail_start_label, start),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            trail.endLocationName?.let { end ->
+                Text(
+                    text = stringResource(R.string.settings_trail_end_label, end),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

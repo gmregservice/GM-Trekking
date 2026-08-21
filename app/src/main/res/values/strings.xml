@@ -98,6 +98,8 @@
     <string name="settings_trails_empty">Nessun sentiero scaricato per quest\'area.</string>
     <string name="settings_trails_delete">Elimina sentiero</string>
     <string name="settings_trails_count">%1$d sentieri scaricati per %2$s.</string>
+    <string name="settings_trail_start_label">Partenza: %1$s</string>
+    <string name="settings_trail_end_label">Arrivo: %1$s</string>
 
     <!-- Bussola sovrapposta alla mappa, in navigazione -->
     <string name="compass_toggle">Bussola: tocca per nascondere o mostrare</string>
