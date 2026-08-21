@@ -15,6 +15,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.gmtrekking.app.data.gpx.GpxTrack
+import com.gmtrekking.app.data.maps.MapStyle
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -38,14 +39,23 @@ import org.maplibre.geojson.FeatureCollection
  *    l'app si apre mostrando solo la posizione corrente, senza obbligare a
  *    caricare un percorso);
  *  - la posizione corrente come cerchio, sempre visibile;
- *  - zoom automatico sulla posizione quando [autoZoomIn] è true (punti critici
- *    del percorso: bivi, tratti ravvicinati — vedi NavigationEngine.shouldZoomIn;
- *    ha senso solo quando un percorso è caricato, il chiamante passa false altrimenti);
+ *  - zoom automatico sulla posizione quando [autoZoomIn] è true (vicino al
+ *    prossimo punto del tracciato — vedi NavigationEngine.shouldZoomIn; ha
+ *    senso solo quando un percorso è caricato, il chiamante passa false
+ *    altrimenti), MA sospeso finché l'utente sta scorrendo/zoomando
+ *    manualmente la mappa (vedi userIsPanning sotto) — bug reale confermato
+ *    su dispositivo (agosto 2026, "mappa bloccata durante la navigazione"):
+ *    con punti del tracciato ravvicinati (un GPX vero, o un percorso reale
+ *    calcolato verso un luogo) si è quasi sempre entro la soglia dei 60 m dal
+ *    prossimo punto, quindi autoZoomIn restava vero in modo pressoché
+ *    continuo, e la camera veniva ri-centrata ad ogni fix GPS annullando nel
+ *    giro di un secondo qualunque pan/zoom manuale;
  *  - ricentraggio manuale: incrementando [recenterRequest] (es. al tap di un
  *    pulsante "Ricentra" nella schermata chiamante) la camera torna sulla
- *    posizione corrente. Serve perché scorrendo la mappa per vedere cosa c'è
- *    più avanti lungo il percorso, altrimenti non c'era modo di tornare sulla
- *    propria posizione senza cercarla manualmente.
+ *    posizione corrente e riprende lo zoom automatico sospeso sopra. Serve
+ *    perché scorrendo la mappa per vedere cosa c'è più avanti lungo il
+ *    percorso, altrimenti non c'era modo di tornare sulla propria posizione
+ *    senza cercarla manualmente.
  *  - modalità "sola lettura" ([showCurrentPosition] = false): nasconde il
  *    cerchio di posizione, per la Cronologia percorsi (ActivityDetailScreen),
  *    dove si rivede un percorso concluso e non ha senso mostrare "dove sono
@@ -107,6 +117,11 @@ fun TrekMapView(
     // con l'ultimo valore visto è il modo standard in Compose per reagire a un
     // "evento" (non a un valore continuo) dentro la callback update di AndroidView.
     val lastHandledRecenterRequest = remember { mutableStateOf(0) }
+    // Vero da quando l'utente ha spostato/zoomato la mappa con un gesto,
+    // finché non tocca "Ricentra" (o non cambia tracciato/destinazione).
+    // Mentre è vero, lo zoom automatico (autoZoomIn) resta sospeso — vedi il
+    // commento sopra la funzione per il bug che questo flag risolve.
+    val userIsPanning = remember { mutableStateOf(false) }
 
     // MapView richiede il proprio ciclo di vita Android (onCreate/onStart/...).
     // Lo colleghiamo a quello della schermata Compose inoltrando gli eventi del
@@ -120,6 +135,16 @@ fun TrekMapView(
                 onStart()
                 onResume()
                 getMapAsync { maplibreMap ->
+                    // Distingue un movimento della camera causato da un gesto
+                    // dell'utente (pan/pinch-zoom) da uno causato dal nostro
+                    // stesso codice (easeCamera/moveCamera qui sotto): solo il
+                    // primo deve sospendere lo zoom automatico, vedi
+                    // userIsPanning sopra.
+                    maplibreMap.addOnCameraMoveStartedListener { reason ->
+                        if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) {
+                            userIsPanning.value = true
+                        }
+                    }
                     maplibreMap.setStyle(Style.Builder().fromUri(MAP_STYLE_URL)) { style ->
                         if (track != null) {
                             addTrackLayer(style, track)
@@ -186,10 +211,15 @@ fun TrekMapView(
 
                 if (track != null && track != lastFittedTrack.value) {
                     // Il tracciato è cambiato (nuovo GPX caricato, o rimosso e
-                    // ricaricato): inquadra il nuovo percorso per intero.
+                    // ricaricato): inquadra il nuovo percorso per intero. Un
+                    // nuovo percorso è una scelta esplicita dell'utente, quindi
+                    // ha senso che la camera "salti" anche se stava scorrendo
+                    // manualmente la mappa un attimo prima — resettiamo anche
+                    // userIsPanning, per lo stesso motivo del tap su "Ricentra".
                     fitCameraToTrack(maplibreMap, track)
                     lastFittedTrack.value = track
                     lastFittedPoi.value = null
+                    userIsPanning.value = false
                 } else if (track == null) {
                     lastFittedTrack.value = null
                     if (focusOnPoi != null && focusOnPoi != lastFittedPoi.value) {
@@ -200,12 +230,13 @@ fun TrekMapView(
                         // che currentLat/currentLon cambiano di continuo).
                         fitCameraToPoints(maplibreMap, listOf(LatLng(currentLat, currentLon), LatLng(focusOnPoi.first, focusOnPoi.second)))
                         lastFittedPoi.value = focusOnPoi
+                        userIsPanning.value = false
                     } else if (focusOnPoi == null) {
                         lastFittedPoi.value = null
                     }
                 }
 
-                if (autoZoomIn) {
+                if (autoZoomIn && !userIsPanning.value) {
                     easeCameraToPosition(maplibreMap, currentLat, currentLon, ZOOM_DETAIL)
                 }
 
@@ -213,9 +244,11 @@ fun TrekMapView(
                     // Ricentraggio manuale (pulsante "Ricentra"): stesso livello di
                     // zoom "di dettaglio" usato durante la navigazione attiva se un
                     // percorso è caricato, altrimenti quello "d'insieme" di partenza.
+                    // Riprende anche lo zoom automatico sospeso sopra (userIsPanning).
                     val zoom = if (track != null) ZOOM_DETAIL else ZOOM_OVERVIEW
                     easeCameraToPosition(maplibreMap, currentLat, currentLon, zoom)
                     lastHandledRecenterRequest.value = recenterRequest
+                    userIsPanning.value = false
                 }
             }
         },
@@ -242,7 +275,9 @@ fun TrekMapView(
     }
 }
 
-private const val MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
+// Vedi data/maps/MapStyle.kt: unico posto con l'URL, condiviso anche con il
+// download offline (OfflineMapManager).
+private val MAP_STYLE_URL = MapStyle.URL
 private const val SOURCE_TRACK = "gm-trekking-track-source"
 private const val LAYER_TRACK = "gm-trekking-track-layer"
 private const val SOURCE_POSITION = "gm-trekking-position-source"

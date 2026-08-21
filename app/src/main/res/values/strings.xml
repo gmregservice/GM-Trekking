@@ -77,6 +77,25 @@
     <string name="settings_navigation_active_note">Con una chiave salvata, navigando verso un luogo utile la mappa mostra il percorso reale su sentieri e strade, non più una semplice linea retta. Se manca la chiave, o il calcolo del percorso non riesce (es. limite giornaliero raggiunto), la navigazione continua comunque con la linea retta.</string>
     <string name="settings_navigation_privacy_note">Nota sulla privacy: ad ogni richiesta di instradamento (solo quando avvii la navigazione verso un luogo, non in continuo) la tua posizione e la destinazione scelta vengono inviate a OpenRouteService (servizio di terze parti, non gestito da noi) per calcolare il percorso.</string>
 
+    <string name="settings_section_offline_maps_title">Mappa offline</string>
+    <string name="settings_section_offline_maps_description">Scarica in anticipo la mappa di un\'area (mentre hai connessione, es. da casa), per poterla vedere anche senza rete durante l\'escursione. Per ora un\'unica area fissa: la scelta libera dell\'area arriverà in un secondo momento.</string>
+    <string name="settings_offline_maps_download">Scarica mappa %1$s offline</string>
+    <string name="settings_offline_maps_downloaded">Mappa %1$s già scaricata, disponibile offline.</string>
+    <string name="settings_offline_maps_delete">Elimina mappa scaricata</string>
+    <string name="settings_offline_maps_progress_starting">Avvio download…</string>
+    <string name="settings_offline_maps_progress_percent">Scaricamento in corso: %1$d%% (%2$s)</string>
+    <string name="settings_offline_maps_completed">Download completato (%1$s).</string>
+    <string name="settings_offline_maps_failed">Download non riuscito.\n\nDettaglio tecnico: %1$s</string>
+    <string name="settings_offline_maps_note">Il download richiede una connessione buona (idealmente Wi-Fi) e qualche decina/centinaio di MB di spazio. Una volta scaricata, la mappa resta disponibile offline finché non la elimini da qui.</string>
+
+    <string name="settings_section_trails_title">Sentieri scaricati</string>
+    <string name="settings_section_trails_description">Scarica in anticipo i sentieri di un\'area (dati OpenStreetMap), per poterli usare come guida anche senza connessione. Per ora un\'unica area fissa: la scelta libera dell\'area arriverà in un secondo momento.</string>
+    <string name="settings_trails_download">Scarica sentieri %1$s</string>
+    <string name="settings_trails_downloading">Ricerca sentieri in corso…</string>
+    <string name="settings_trails_empty">Nessun sentiero scaricato per quest\'area.</string>
+    <string name="settings_trails_delete">Elimina sentiero</string>
+    <string name="settings_trails_count">%1$d sentieri scaricati per %2$s.</string>
+
     <!-- Bussola sovrapposta alla mappa, in navigazione -->
     <string name="compass_toggle">Bussola: tocca per nascondere o mostrare</string>
     <string name="compass_north">N</string>

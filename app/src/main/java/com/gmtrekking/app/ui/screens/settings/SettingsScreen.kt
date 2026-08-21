@@ -47,9 +47,24 @@ import androidx.compose.ui.unit.dp
 import com.gmtrekking.app.R
 import com.gmtrekking.app.data.emergency.EmergencyContact
 import com.gmtrekking.app.data.emergency.EmergencyContactsStorage
+import com.gmtrekking.app.data.gpx.CurrentTrackHolder
+import com.gmtrekking.app.data.maps.OfflineMapManager
+import com.gmtrekking.app.data.maps.OfflineRegions
 import com.gmtrekking.app.data.settings.AppSettingsStorage
+import com.gmtrekking.app.data.trails.FixedTrailAreas
+import com.gmtrekking.app.data.trails.SavedTrail
+import com.gmtrekking.app.data.trails.SavedTrailsStorage
+import com.gmtrekking.app.data.trails.TrailDifficulty
+import com.gmtrekking.app.data.trails.TrailRepository
+import com.gmtrekking.app.data.trails.displayName
+import com.gmtrekking.app.data.trails.estimatedMinutes
+import com.gmtrekking.app.data.trails.toGpxTrack
+import com.gmtrekking.app.data.trails.toSavedTrail
+import com.gmtrekking.app.ui.screens.trailnavigation.formatTrackingDistance
+import com.gmtrekking.app.ui.screens.trailnavigation.formatTrackingDuration
 import kotlinx.coroutines.launch
 import java.util.UUID
+import kotlin.math.roundToInt
 
 /**
  * "Impostazioni": pagina generale dell'app, pensata fin dall'inizio come
@@ -68,6 +83,16 @@ import java.util.UUID
  *    chiamata al servizio (deciso esplicitamente di procedere per gradi,
  *    agosto 2026: prima la pagina di configurazione, poi in un passo
  *    successivo l'instradamento vero).
+ *  - **Mappa offline**: download di un'area rettangolare (per ora un'unica
+ *    area fissa, la Lombardia — la scelta libera dell'area è pianificata per
+ *    un secondo momento) tramite `OfflineManager` di MapLibre (vedi
+ *    `data/maps/OfflineMapManager.kt`), per l'uso della mappa senza
+ *    connessione dati.
+ *  - **Sentieri scaricati**: scarica in blocco tutti i sentieri OpenStreetMap
+ *    di un'area fissa (per ora solo Val di Mello — stessa scelta "area fissa
+ *    per ora" della mappa offline) e li salva in locale (vedi
+ *    `data/trails/SavedTrailsStorage.kt`), selezionabili come percorso guida
+ *    anche senza connessione.
  *
  * Raggiungibile sia da una nuova icona dedicata nella mappa principale
  * (coerente con "raggruppare tutte le opzioni... presenti e future" — deve
@@ -119,6 +144,49 @@ fun SettingsScreen(onBack: () -> Unit) {
         apiKeyInput = stored.orEmpty()
     }
     LaunchedEffect(Unit) { reloadApiKey() }
+
+    // --- Sezione "Mappa offline" ---
+    // Elenco delle aree già scaricate: null finché non è stato ancora
+    // interrogato il database offline di MapLibre (vedi OfflineMapManager).
+    var savedRegions by remember { mutableStateOf<List<OfflineMapManager.SavedRegion>?>(null) }
+    var downloadState by remember { mutableStateOf<OfflineMapManager.DownloadState>(OfflineMapManager.DownloadState.Idle) }
+
+    fun reloadSavedRegions() {
+        OfflineMapManager.listSavedRegions(
+            context,
+            onResult = { savedRegions = it },
+            onError = { savedRegions = emptyList() },
+        )
+    }
+    LaunchedEffect(Unit) { reloadSavedRegions() }
+
+    // --- Sezione "Sentieri scaricati" (Val di Mello, area fissa) ---
+    var savedTrails by remember { mutableStateOf<List<SavedTrail>?>(null) }
+    var trailsDownloadError by remember { mutableStateOf<String?>(null) }
+    var isDownloadingTrails by remember { mutableStateOf(false) }
+
+    suspend fun reloadSavedTrails() {
+        savedTrails = SavedTrailsStorage.loadForArea(context, FixedTrailAreas.VAL_DI_MELLO.name)
+    }
+    LaunchedEffect(Unit) { reloadSavedTrails() }
+
+    fun downloadValDiMelloTrails() {
+        isDownloadingTrails = true
+        trailsDownloadError = null
+        coroutineScope.launch {
+            val area = FixedTrailAreas.VAL_DI_MELLO
+            try {
+                val trails = TrailRepository().findNearby(area.centerLat, area.centerLon, area.radiusMeters)
+                SavedTrailsStorage.replaceArea(context, area.name, trails.map { it.toSavedTrail(area.name) })
+                reloadSavedTrails()
+            } catch (t: Throwable) {
+                val detail = "${t::class.simpleName}: ${t.message ?: "nessun dettaglio"}"
+                trailsDownloadError = "Non riesco a scaricare i sentieri di ${area.name}. Controlla la connessione e riprova.\n\nDettaglio tecnico: $detail"
+            } finally {
+                isDownloadingTrails = false
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -250,6 +318,159 @@ fun SettingsScreen(onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp),
             )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
+
+            SettingsSectionTitle(
+                title = stringResource(R.string.settings_section_offline_maps_title),
+                description = stringResource(R.string.settings_section_offline_maps_description),
+            )
+
+            when (val state = downloadState) {
+                is OfflineMapManager.DownloadState.Idle -> {
+                    val existing = savedRegions?.firstOrNull { it.name == OfflineRegions.LOMBARDIA_NAME }
+                    if (existing != null) {
+                        Text(
+                            text = stringResource(R.string.settings_offline_maps_downloaded, OfflineRegions.LOMBARDIA_NAME),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                OfflineMapManager.delete(existing.region) { _, _ -> reloadSavedRegions() }
+                            },
+                            modifier = Modifier.padding(top = 8.dp),
+                        ) { Text(stringResource(R.string.settings_offline_maps_delete)) }
+                    } else {
+                        Button(
+                            onClick = {
+                                val pixelRatio = context.resources.displayMetrics.density
+                                downloadState = OfflineMapManager.DownloadState.InProgress(0, 0, 0)
+                                OfflineMapManager.download(
+                                    context = context,
+                                    definition = OfflineRegions.lombardiaDefinition(pixelRatio),
+                                    name = OfflineRegions.LOMBARDIA_NAME,
+                                    onUpdate = { newState ->
+                                        downloadState = newState
+                                        if (newState is OfflineMapManager.DownloadState.Completed) {
+                                            reloadSavedRegions()
+                                        }
+                                    },
+                                )
+                            },
+                            modifier = Modifier.padding(top = 8.dp),
+                        ) { Text(stringResource(R.string.settings_offline_maps_download, OfflineRegions.LOMBARDIA_NAME)) }
+                    }
+                }
+
+                is OfflineMapManager.DownloadState.InProgress -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp))
+                        Text(
+                            text = if (state.requiredResourceCount > 0) {
+                                val percent = (state.completedResourceCount * 100 / state.requiredResourceCount).toInt()
+                                stringResource(R.string.settings_offline_maps_progress_percent, percent, formatMegabytes(state.downloadedBytes))
+                            } else {
+                                stringResource(R.string.settings_offline_maps_progress_starting)
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+
+                is OfflineMapManager.DownloadState.Completed -> {
+                    Text(
+                        text = stringResource(R.string.settings_offline_maps_completed, formatMegabytes(state.downloadedBytes)),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
+
+                is OfflineMapManager.DownloadState.Failed -> {
+                    Text(
+                        text = stringResource(R.string.settings_offline_maps_failed, state.message),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    OutlinedButton(
+                        onClick = { downloadState = OfflineMapManager.DownloadState.Idle },
+                        modifier = Modifier.padding(top = 8.dp),
+                    ) { Text(stringResource(R.string.action_retry)) }
+                }
+            }
+            Text(
+                text = stringResource(R.string.settings_offline_maps_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 12.dp),
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
+
+            SettingsSectionTitle(
+                title = stringResource(R.string.settings_section_trails_title),
+                description = stringResource(R.string.settings_section_trails_description),
+            )
+
+            if (isDownloadingTrails) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp))
+                    Text(stringResource(R.string.settings_trails_downloading), style = MaterialTheme.typography.bodyMedium)
+                }
+            } else {
+                Button(
+                    onClick = { downloadValDiMelloTrails() },
+                    modifier = Modifier.padding(top = 8.dp),
+                ) { Text(stringResource(R.string.settings_trails_download, FixedTrailAreas.VAL_DI_MELLO.name)) }
+            }
+
+            trailsDownloadError?.let { message ->
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            savedTrails?.let { list ->
+                if (list.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.settings_trails_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 12.dp),
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.settings_trails_count, list.size, FixedTrailAreas.VAL_DI_MELLO.name),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 12.dp),
+                    )
+                    list.forEach { trail ->
+                        SavedTrailListItem(
+                            trail = trail,
+                            onUseAsGuideClick = {
+                                CurrentTrackHolder.track.value = trail.toGpxTrack()
+                                onBack()
+                            },
+                            onDeleteClick = {
+                                coroutineScope.launch {
+                                    SavedTrailsStorage.delete(context, trail.id, trail.areaName)
+                                    reloadSavedTrails()
+                                }
+                            },
+                        )
+                    }
+                }
+            }
         }
 
         val dialogState = contactDialogState
@@ -267,6 +488,73 @@ fun SettingsScreen(onBack: () -> Unit) {
 }
 
 private const val ORS_SIGNUP_URL = "https://openrouteservice.org/sign-up/"
+
+/** Dimensione leggibile in MB con una cifra decimale (es. "18,4 MB"), usata per il download mappe offline. */
+private fun formatMegabytes(bytes: Long): String {
+    val mb = bytes / (1024.0 * 1024.0)
+    val rounded = (mb * 10).roundToInt() / 10.0
+    return if (rounded < 0.1) "< 0,1 MB" else "$rounded MB"
+}
+
+/**
+ * Stessa struttura di TrailListItem in NearbyTrailsScreen.kt, senza la
+ * distanza dall'utente (non ha più significato per un sentiero già salvato,
+ * vedi commento su SavedTrail) e senza il pulsante di esportazione GPX (già
+ * salvato in locale, l'export su file resta una funzione di "Sentieri
+ * vicini").
+ */
+@Composable
+private fun SavedTrailListItem(
+    trail: SavedTrail,
+    onUseAsGuideClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(trail.displayName(), style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = stringResource(R.string.nearby_trails_length_label, formatTrackingDistance(trail.lengthMeters)),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Text(
+                text = stringResource(
+                    R.string.nearby_trails_estimated_time_label,
+                    formatTrackingDuration(trail.estimatedMinutes() * 60_000L),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+            Text(
+                text = savedTrailDifficultyLabel(trail.difficulty),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(onClick = onUseAsGuideClick, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.nearby_trails_use_as_guide))
+                }
+                OutlinedButton(onClick = onDeleteClick, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.settings_trails_delete))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun savedTrailDifficultyLabel(difficulty: TrailDifficulty?): String = when (difficulty) {
+    null -> stringResource(R.string.nearby_trails_difficulty_unknown)
+    TrailDifficulty.HIKING -> stringResource(R.string.nearby_trails_difficulty_hiking)
+    TrailDifficulty.MOUNTAIN_HIKING -> stringResource(R.string.nearby_trails_difficulty_mountain_hiking)
+    TrailDifficulty.DEMANDING_MOUNTAIN_HIKING -> stringResource(R.string.nearby_trails_difficulty_demanding_mountain_hiking)
+    TrailDifficulty.ALPINE_HIKING -> stringResource(R.string.nearby_trails_difficulty_alpine_hiking)
+    TrailDifficulty.DEMANDING_ALPINE_HIKING -> stringResource(R.string.nearby_trails_difficulty_demanding_alpine_hiking)
+    TrailDifficulty.DIFFICULT_ALPINE_HIKING -> stringResource(R.string.nearby_trails_difficulty_difficult_alpine_hiking)
+}
 
 /** Stato del dialog di aggiunta/modifica contatto: vedi commento su contactDialogState sopra. */
 private sealed class ContactDialogState {

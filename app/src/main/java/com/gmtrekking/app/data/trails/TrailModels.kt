@@ -2,6 +2,7 @@ package com.gmtrekking.app.data.trails
 
 import com.gmtrekking.app.data.gpx.GpxTrack
 import com.gmtrekking.app.data.gpx.TrackPoint
+import kotlinx.serialization.Serializable
 import kotlin.math.roundToInt
 
 /**
@@ -38,7 +39,13 @@ data class NearbyTrail(
  */
 fun NearbyTrail.displayName(): String = ref?.let { "$it · $name" } ?: name
 
-/** Corrisponde ai valori del tag OSM `sac_scale` (Swiss Alpine Club hiking scale), dal più facile al più impegnativo. */
+/**
+ * Corrisponde ai valori del tag OSM `sac_scale` (Swiss Alpine Club hiking
+ * scale), dal più facile al più impegnativo. `@Serializable`: necessario per
+ * salvare un [NearbyTrail] scaricato in locale (vedi SavedTrail.kt) —
+ * aggiunto insieme a quella funzionalità, nessun impatto sull'uso esistente.
+ */
+@Serializable
 enum class TrailDifficulty {
     HIKING,
     MOUNTAIN_HIKING,
