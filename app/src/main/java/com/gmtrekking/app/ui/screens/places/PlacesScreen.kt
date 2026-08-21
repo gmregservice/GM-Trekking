@@ -108,10 +108,12 @@ fun PlacesScreen(
 
     fun startNavigation(poi: Poi) {
         // La chiave API (Impostazioni > Navigazione) e la posizione di
-        // partenza servono solo per provare a calcolare un percorso reale in
-        // background (vedi PoiNavigationHolder.start): se manca l'una o
-        // l'altra, la navigazione parte comunque, con la linea retta di
-        // riserva già esistente prima di questa funzione.
+        // partenza servono per provare a calcolare un percorso reale in
+        // background (vedi PoiNavigationHolder.start). Se manca l'una o
+        // l'altra, la navigazione verso il luogo parte comunque (il titolo
+        // "Stai andando verso: ..." compare subito), ma senza alcuna guida
+        // (freccia/distanza) finché un percorso reale non arriva — da v1.36
+        // nessuna linea retta di riserva, vedi PoiNavigationHolder.kt.
         val start = currentLocation
         PoiNavigationHolder.start(
             name = poi.name,

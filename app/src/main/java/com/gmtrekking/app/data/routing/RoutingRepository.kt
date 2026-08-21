@@ -34,10 +34,11 @@ sealed class RoutingOutcome {
  *
  * **Nessuna eccezione propagata al chiamante**: qualunque fallimento (rete,
  * HTTP non 2xx, risposta non valida) diventa un [RoutingOutcome.Failure] con
- * dettaglio, mai un crash o un blocco della navigazione — chi chiama questa
- * funzione decide se e come mostrare l'errore, ma può sempre continuare con
- * la linea retta di riserva (già esistente prima di questa funzione): vedi
- * `PoiNavigationHolder.kt`.
+ * dettaglio, mai un crash dell'app — chi chiama questa funzione decide se e
+ * come mostrare l'errore. Da v1.36 un fallimento qui significa "nessuna guida
+ * disponibile per questo luogo" (niente più linea retta di riserva, vedi
+ * `PoiNavigationHolder.kt`), non solo un dettaglio informativo accanto a una
+ * guida che funziona comunque.
  */
 class RoutingRepository(
     private val api: RoutingApiService = RoutingApiService.create(),

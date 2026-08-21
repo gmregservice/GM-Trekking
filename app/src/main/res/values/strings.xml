@@ -138,8 +138,8 @@
     <string name="poi_nav_distance_remaining">Mancano %1$s per arrivare</string>
     <string name="poi_nav_stop">Termina navigazione verso il luogo</string>
     <string name="poi_nav_routing_loading">Calcolo del percorso reale in corso…</string>
-    <string name="poi_nav_routing_no_api_key">Nessuna chiave API configurata: sto usando la linea d\'aria (Impostazioni > Navigazione).</string>
-    <string name="poi_nav_routing_failed">Percorso reale non disponibile, uso la linea d\'aria. Dettaglio tecnico: %1$s</string>
+    <string name="poi_nav_routing_no_api_key">Percorso non calcolabile: nessuna chiave API configurata (Impostazioni > Navigazione). Nessuna guida in linea d\'aria per sicurezza: naviga con cautela verso questo luogo.</string>
+    <string name="poi_nav_routing_failed">Percorso non calcolabile. Nessuna guida in linea d\'aria per sicurezza: naviga con cautela verso questo luogo.\n\nDettaglio tecnico: %1$s</string>
 
     <!-- Emergenza (punto 7) -->
     <string name="home_emergency">Emergenza</string>

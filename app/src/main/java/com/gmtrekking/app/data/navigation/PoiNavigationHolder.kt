@@ -32,13 +32,16 @@ object PoiNavigationHolder {
      * OpenRouteService (data/routing/RoutingRepository.kt), quando disponibile.
      *
      * [routePoints] parte sempre `null` (impostato da PlacesScreen.kt
-     * all'avvio della navigazione, PRIMA che la richiesta di rete completi:
-     * la navigazione parte subito con la linea retta di riserva, senza
-     * aspettare) e viene aggiornato in un secondo momento se/quando il
-     * percorso reale arriva — se l'utente non ha configurato una chiave API
-     * in Impostazioni, o la richiesta fallisce, resta `null` per sempre e si
-     * continua a usare la linea retta: mai bloccare la navigazione per un
-     * servizio esterno facoltativo.
+     * all'avvio della navigazione, PRIMA che la richiesta di rete completi) e
+     * viene aggiornato in un secondo momento se/quando il percorso reale
+     * arriva. **Nessuna linea retta di riserva** (cambiato in v1.36, richiesto
+     * esplicitamente: in un ambiente sconosciuto/potenzialmente ostile una
+     * guida in linea d'aria può indicare di attraversare un ostacolo reale —
+     * es. un torrente dove un sentiero vero passerebbe da un ponte poco
+     * distante): finché [routePoints] resta `null` (richiesta in corso,
+     * chiave API non configurata, o richiesta fallita), `MainMapScreen.kt`
+     * non calcola né mostra alcuna freccia/distanza, solo un messaggio
+     * esplicito che spiega perché manca una guida (vedi [RoutingStatus]).
      */
     data class Target(
         val name: String,
@@ -54,9 +57,11 @@ object PoiNavigationHolder {
      * "chiave non configurata" da "richiesta fallita" da "ancora in corso",
      * quindi nessun modo di capire perché non compariva alcuna indicazione
      * sulla mappa. `MainMapScreen.kt` lo mostra a schermo (stesso principio
-     * già usato per gli errori di Overpass in `PlacesViewModel.kt`), ma resta
-     * solo informativo: la navigazione con la linea retta di riserva parte e
-     * funziona comunque, a prescindere da questo stato.
+     * già usato per gli errori di Overpass in `PlacesViewModel.kt`) — da v1.36
+     * non più solo informativo: finché questo stato non è `Success`, non
+     * viene mostrata alcuna freccia/distanza (niente più linea retta di
+     * riserva), quindi questo testo è l'unica indicazione di navigazione
+     * disponibile per l'utente in quei casi.
      */
     sealed class RoutingStatus {
         object Loading : RoutingStatus()
@@ -82,11 +87,12 @@ object PoiNavigationHolder {
      * Avvia la navigazione verso il luogo ([name]/[latitude]/[longitude]).
      * Se [apiKey] e la posizione di partenza sono disponibili, prova anche a
      * calcolare in background un percorso reale su sentieri/strade
-     * (OpenRouteService, profilo escursionistico) e ad aggiornare
-     * [target] con quel percorso quando/se arriva — senza bloccare l'avvio
-     * della navigazione, che parte subito con la linea retta di riserva
-     * (calcolata a parte in MainMapScreen.kt finché [Target.routePoints]
-     * resta `null`).
+     * (OpenRouteService, profilo escursionistico) e ad aggiornare [target]
+     * con quel percorso quando/se arriva. [target] viene impostato subito,
+     * ma senza una guida attiva (nessuna linea retta di riserva, vedi
+     * [Target.routePoints]) finché il percorso reale non arriva — l'utente
+     * vede subito "Stai andando verso: ..." più un messaggio di stato
+     * (`MainMapScreen.kt`), non una freccia calcolata su una retta.
      */
     fun start(
         name: String,

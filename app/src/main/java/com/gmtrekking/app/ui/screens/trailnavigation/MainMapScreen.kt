@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -55,7 +56,6 @@ import com.gmtrekking.app.R
 import com.gmtrekking.app.data.gpx.CurrentTrackHolder
 import com.gmtrekking.app.data.gpx.GpxParser
 import com.gmtrekking.app.data.gpx.GpxTrack
-import com.gmtrekking.app.data.gpx.TrackPoint
 import com.gmtrekking.app.data.navigation.NavigationEngine
 import com.gmtrekking.app.data.navigation.PoiNavigationHolder
 import com.gmtrekking.app.data.tracking.ActivityStorage
@@ -249,36 +249,31 @@ fun MainMapScreen(
         // schermata: quello verso un luogo utile ha la priorità (punto 6 del
         // piano), altrimenti quello GPX caricato come guida.
         //
-        // Verso un luogo utile ci sono due casi, a seconda che
-        // PoiNavigationHolder sia riuscito a calcolare un percorso reale su
-        // sentieri/strade (routePoints, tramite OpenRouteService — vedi
-        // "Instradamento reale" in docs/PIANO_SVILUPPO.md):
-        //  - **Percorso reale disponibile**: usato così com'è, fisso da
-        //    quando è stato calcolato. Il punto più vicino/la direzione
-        //    seguono la posizione corrente lungo QUESTO percorso, esattamente
-        //    come per un tracciato GPX caricato.
-        //  - **Nessun percorso reale** (chiave non configurata in
-        //    Impostazioni, richiesta non ancora arrivata, o fallita): resta
-        //    il comportamento precedente, una linea retta di due soli punti
-        //    (posizione corrente + destinazione), ricostruita ad ogni fix GPS
-        //    — per questo il punto più vicino del "percorso" è sempre quello
-        //    di partenza (distanza 0) e l'avviso "fuori percorso" non scatta
-        //    mai in questo caso, effetto collaterale voluto.
-        val navigationTrack = remember(poiTarget, loadedTrack, location.latitude, location.longitude) {
-            poiTarget?.let { target ->
-                val realRoute = target.routePoints
+        // Verso un luogo utile: NESSUNA linea retta di riserva (cambiato in
+        // v1.36 — richiesto esplicitamente: in un ambiente sconosciuto una
+        // guida in linea d'aria può indicare di attraversare un ostacolo reale,
+        // es. un torrente dove un sentiero vero passerebbe da un ponte poco
+        // distante). Se PoiNavigationHolder non è riuscito a calcolare un
+        // percorso reale su sentieri/strade (routePoints, tramite
+        // OpenRouteService — vedi "Instradamento reale" in
+        // docs/PIANO_SVILUPPO.md), navigationTrack resta `null`: niente
+        // freccia né distanza calcolate su una retta, solo un messaggio
+        // esplicito mostrato più sotto (vedi routingStatus). Quando il
+        // percorso reale arriva, viene usato così com'è, fisso da quel
+        // momento — il punto più vicino/la direzione seguono la posizione
+        // corrente lungo QUESTO percorso, esattamente come per un tracciato
+        // GPX caricato.
+        val navigationTrack = remember(poiTarget, loadedTrack) {
+            if (poiTarget != null) {
+                val realRoute = poiTarget.routePoints
                 if (realRoute != null && realRoute.size >= 2) {
-                    GpxTrack(name = target.name, points = realRoute)
+                    GpxTrack(name = poiTarget.name, points = realRoute)
                 } else {
-                    GpxTrack(
-                        name = target.name,
-                        points = listOf(
-                            TrackPoint(location.latitude, location.longitude),
-                            TrackPoint(target.latitude, target.longitude),
-                        ),
-                    )
+                    null
                 }
-            } ?: loadedTrack
+            } else {
+                loadedTrack
+            }
         }
         val engine = remember(navigationTrack) { navigationTrack?.let { NavigationEngine(it) } }
         val navState = remember(engine, location.latitude, location.longitude) {
@@ -287,14 +282,15 @@ fun MainMapScreen(
 
         // Traccia disegnata come linea sulla mappa (TrekMapView, sotto): il
         // percorso GPX caricato ha sempre la priorità; altrimenti, SOLO se
-        // disponibile un percorso reale verso un luogo utile (mai la linea
-        // retta di riserva sopra, che "salterebbe" continuamente perché il
-        // suo primo punto è sempre la posizione corrente — vedi commento
-        // originale più sotto su TrekMapView).
-        // remember(loadedTrack, poiTarget), non location: a differenza della
-        // linea retta di riserva, il percorso reale non dipende dalla
-        // posizione corrente (resta fisso da quando è stato calcolato), quindi
-        // non c'è motivo di ricostruire l'oggetto ad ogni fix GPS.
+        // disponibile un percorso reale verso un luogo utile — da v1.36
+        // equivalente a navigationTrack in pratica (nessuna linea retta più
+        // possibile in nessuno dei due casi), tenuta comunque come variabile
+        // distinta per chiarezza (una riguarda cosa disegnare, l'altra cosa
+        // usare per calcolare frecce/distanze).
+        // remember(loadedTrack, poiTarget), non location: il percorso reale
+        // non dipende dalla posizione corrente (resta fisso da quando è stato
+        // calcolato), quindi non c'è motivo di ricostruire l'oggetto ad ogni
+        // fix GPS.
         val mapTrack = remember(loadedTrack, poiTarget) {
             loadedTrack ?: run {
                 val target = poiTarget
@@ -370,10 +366,8 @@ fun MainMapScreen(
                     // Il layer del tracciato/il "fit" automatico della camera seguono
                     // loadedTrack (percorso GPX caricato) o, in sua assenza, il percorso
                     // REALE verso un luogo utile quando disponibile (mapTrack, sopra) —
-                    // MAI la linea retta di riserva: quest'ultima cambia ad ogni fix GPS
-                    // (il primo punto è sempre la posizione corrente), e disegnarla
-                    // ri-inquadrerebbe la camera ad ogni aggiornamento, un fastidioso
-                    // "salto" continuo della mappa.
+                    // da v1.36 non esiste più una linea retta di riserva da poter
+                    // disegnare per errore (vedi commento su navigationTrack più sopra).
                     track = mapTrack,
                     currentLat = location.latitude,
                     currentLon = location.longitude,
@@ -500,6 +494,14 @@ fun MainMapScreen(
                 // val), quindi lo smart cast su poiTarget.name da un if non è
                 // ammesso dal compilatore — copiarlo in un val locale lo rende
                 // di nuovo possibile.
+                // Titolo: se navState non è null e c'è un poiTarget, vuol dire
+                // per costruzione che è disponibile un percorso reale
+                // (navigationTrack sopra è null finché routePoints non arriva
+                // — vedi il commento su navigationTrack) quindi qui
+                // routingStatus è sempre Success, nessun testo di stato da
+                // mostrare: quel caso (in corso/fallito/nessuna chiave) è
+                // gestito interamente nel ramo "else if (poiTarget != null)"
+                // più sotto, dove navState è null.
                 val currentPoiTarget = poiTarget
                 if (currentPoiTarget != null) {
                     Text(
@@ -507,32 +509,6 @@ fun MainMapScreen(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
                     )
-                    // Stato del percorso reale, solo informativo: in ogni caso
-                    // (in corso, fallito, nessuna chiave) la navigazione con la
-                    // linea retta di riserva parte comunque, questo testo serve
-                    // solo a far capire perché sulla mappa non compare (ancora)
-                    // una linea disegnata — vedi PoiNavigationHolder.RoutingStatus.
-                    when (val status = routingStatus) {
-                        PoiNavigationHolder.RoutingStatus.Loading -> Text(
-                            text = stringResource(R.string.poi_nav_routing_loading),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                        )
-                        PoiNavigationHolder.RoutingStatus.NoApiKey -> Text(
-                            text = stringResource(R.string.poi_nav_routing_no_api_key),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                        )
-                        is PoiNavigationHolder.RoutingStatus.Failure -> Text(
-                            text = stringResource(R.string.poi_nav_routing_failed, status.detail),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                        )
-                        PoiNavigationHolder.RoutingStatus.Success, null -> Unit
-                    }
                 } else {
                     loadedTrack?.let { track ->
                         Text(
@@ -593,6 +569,67 @@ fun MainMapScreen(
                         TextButton(onClick = { CurrentTrackHolder.track.value = null }) {
                             Text(stringResource(R.string.map_remove_track))
                         }
+                    }
+                }
+            } else if (poiTarget != null) {
+                // poiTarget viene da "by collectAsState()" (un getter, non un
+                // semplice val): copiarlo in un val locale per poter usare
+                // ".name" più sotto, altrimenti il compilatore non ammette lo
+                // smart cast da Target? a Target (stesso motivo già annotato
+                // sopra per currentPoiTarget).
+                val targetWithoutRoute = poiTarget
+                // Navigazione verso un luogo utile avviata, ma nessun
+                // percorso reale disponibile (ancora in corso, chiave API non
+                // configurata, o richiesta fallita) — navigationTrack sopra è
+                // `null` in questo caso, quindi niente freccia/distanza
+                // calcolate su una linea retta (cambiato in v1.36, vedi
+                // commento su navigationTrack): un messaggio esplicito prende
+                // il posto del riquadro freccia/distanza, non si aggiunge ad
+                // esso.
+                Text(
+                    text = stringResource(R.string.poi_nav_title, targetWithoutRoute?.name.orEmpty()),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    when (val status = routingStatus) {
+                        PoiNavigationHolder.RoutingStatus.Loading -> Text(
+                            text = stringResource(R.string.poi_nav_routing_loading),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        PoiNavigationHolder.RoutingStatus.NoApiKey -> Text(
+                            text = stringResource(R.string.poi_nav_routing_no_api_key),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        is PoiNavigationHolder.RoutingStatus.Failure -> Text(
+                            text = stringResource(R.string.poi_nav_routing_failed, status.detail),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                        )
+                        // Success con navState nullo non dovrebbe accadere
+                        // (routePoints arriva insieme a Success): ramo tenuto
+                        // solo per l'esaustività del "when", nessun testo.
+                        PoiNavigationHolder.RoutingStatus.Success, null -> Unit
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    TextButton(
+                        onClick = { PoiNavigationHolder.target.value = null },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.poi_nav_stop))
                     }
                 }
             } else {
