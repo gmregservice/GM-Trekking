@@ -51,7 +51,15 @@ class TrailRepository(
         centerLat: Double,
         centerLon: Double,
     ): NearbyTrail? {
-        val name = tags["name"] ?: return null // scartiamo i sentieri senza nome: poco utili in un elenco
+        // Prima si scartavano qui le relazioni senza tag `name` ("poco utili
+        // in un elenco"): tolto (agosto 2026) dopo che l'utente ha segnalato
+        // zero sentieri trovati per Val di Mello — una relazione `route=hiking`
+        // senza nome è comunque un sentiero reale ed è meglio mostrarlo con un
+        // nome di ripiego che scartarlo del tutto, specie per un download in
+        // blocco (a differenza di un singolo import GPX con nome scelto
+        // dall'utente). Non risolve il caso in cui non esistano affatto
+        // relazioni catalogate nell'area (vedi docs/PIANO_SVILUPPO.md, punto 21).
+        val name = tags["name"] ?: fallbackName(tags["ref"], id)
 
         val memberWays = members.orEmpty()
             .filter { it.type == "way" }
@@ -106,6 +114,17 @@ class TrailRepository(
         }
         return result
     }
+
+    /**
+     * Nome di ripiego per una relazione OSM `route=hiking` senza tag `name`.
+     * Se ha almeno il tag `ref` (numero ufficiale, es. CAI), lo lascia fare il
+     * lavoro di riconoscimento e resta generico qui — [NearbyTrail.displayName]
+     * antepone comunque il `ref`, risultando in es. "126 · Sentiero". Senza
+     * nemmeno quello, usa l'id della relazione OSM per restare univoco tra più
+     * sentieri senza nome nella stessa area.
+     */
+    private fun fallbackName(ref: String?, id: Long): String =
+        if (ref != null) "Sentiero" else "Sentiero (relazione $id)"
 
     private fun totalDistance(points: List<TrackPoint>): Double {
         var total = 0.0
