@@ -264,10 +264,18 @@ fun MainMapScreen(
         // corrente lungo QUESTO percorso, esattamente come per un tracciato
         // GPX caricato.
         val navigationTrack = remember(poiTarget, loadedTrack) {
-            if (poiTarget != null) {
-                val realRoute = poiTarget.routePoints
+            // poiTarget viene da "by collectAsState()" (un getter, non un
+            // semplice val): va copiato in un val locale prima di poter usare
+            // ".routePoints"/".name" dopo un controllo di nullità, altrimenti
+            // il compilatore rifiuta lo smart cast (stesso motivo già
+            // annotato altrove in questo file per currentPoiTarget/
+            // targetWithoutRoute — bug reale, causa di un fallimento di
+            // compilazione in CI, v1.36).
+            val target = poiTarget
+            if (target != null) {
+                val realRoute = target.routePoints
                 if (realRoute != null && realRoute.size >= 2) {
-                    GpxTrack(name = poiTarget.name, points = realRoute)
+                    GpxTrack(name = target.name, points = realRoute)
                 } else {
                     null
                 }
